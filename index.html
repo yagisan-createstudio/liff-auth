@@ -72,7 +72,7 @@
 <body>
   <div class="app-spinner" id="spinner"></div>
   <div class="loader-text" id="loader-box">
-    <span id="status-text">日次レポートを起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
+    <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
   </div>
   <div class="err-msg" id="err-text"></div>
 
@@ -82,12 +82,45 @@
     const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbx7ZVIc7yvOJMQAqDzTOhMTHW819eZkpKvQaawaW4JhaDvNzuxDOEGnCnp5eNiHQDfp/exec';
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
 
-    // パラメータ判定（アーカイブ遷移時は初期表示を即座に変更）
-    const params = new URLSearchParams(window.location.search);
-    const isArchive = params.get('app') === 'archive';
+    // LIFF特有のパラメータ（liff.state や通常のURLクエリ）から確実に取得する関数
+    function getQueryParam(key) {
+      // 1. 通常のクエリ文字列 (?key=value)
+      const urlParams = new URLSearchParams(window.location.search);
+      let val = urlParams.get(key);
+      if (val) return val;
+
+      // 2. liff.state 内にエンコードされているパラメータを展開 (?liff.state=%3Fkey%3Dvalue)
+      const liffState = urlParams.get('liff.state');
+      if (liffState) {
+        const decodedState = decodeURIComponent(liffState);
+        const stateQueryIndex = decodedState.indexOf('?');
+        if (stateQueryIndex !== -1) {
+          const stateParams = new URLSearchParams(decodedState.substring(stateQueryIndex));
+          val = stateParams.get(key);
+          if (val) return val;
+        }
+      }
+
+      // 3. ハッシュ (#key=value) に逃げているケース
+      if (window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        val = hashParams.get(key);
+        if (val) return val;
+      }
+
+      return null;
+    }
+
+    // パラメータを即座に判定して初期文言を設定
+    const appType = getQueryParam('app');
+    const isArchive = (appType === 'archive');
+
     if (isArchive) {
       document.getElementById('status-text').innerText = 'リダイレクト中';
       document.getElementById('page-title').innerText = 'リダイレクト中';
+    } else {
+      document.getElementById('status-text').innerText = '日次レポートを起動中';
+      document.getElementById('page-title').innerText = '日次レポート';
     }
 
     window.onload = function() {
@@ -110,13 +143,10 @@
           throw new Error('LINE UIDの取得に失敗しました');
         }
 
-        const appType = params.get('app');
-        const dateTarget = params.get('target') || '';
+        const dateTarget = getQueryParam('target') || '';
 
-        let baseUrl = URL_TODAY_VIEWER;
-        if (appType === 'archive') {
-          baseUrl = URL_ARCHIVE_SITE;
-        }
+        // アーカイブか日次ビューアーかを振り分け
+        const baseUrl = isArchive ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
 
         const separator = baseUrl.includes('?') ? '&' : '?';
         let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid)}`;
