@@ -79,17 +79,15 @@
   <script>
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
 
-    const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbx7ZVIc7yvOJMQAqDzTOhMTHW819eZkpKvQaawaW4JhaDvNzuxDOEGnCnp5eNiHQDfp/exec';
+    // ★ 新規デプロイされたURLに更新
+    const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
 
-    // LIFF特有のパラメータ（liff.state や通常のURLクエリ）から確実に取得する関数
     function getQueryParam(key) {
-      // 1. 通常のクエリ文字列 (?key=value)
       const urlParams = new URLSearchParams(window.location.search);
       let val = urlParams.get(key);
       if (val) return val;
 
-      // 2. liff.state 内にエンコードされているパラメータを展開 (?liff.state=%3Fkey%3Dvalue)
       const liffState = urlParams.get('liff.state');
       if (liffState) {
         const decodedState = decodeURIComponent(liffState);
@@ -101,7 +99,6 @@
         }
       }
 
-      // 3. ハッシュ (#key=value) に逃げているケース
       if (window.location.hash) {
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         val = hashParams.get(key);
@@ -111,7 +108,6 @@
       return null;
     }
 
-    // パラメータを即座に判定して初期文言を設定
     const appType = getQueryParam('app');
     const isArchive = (appType === 'archive');
 
@@ -144,8 +140,6 @@
         }
 
         const dateTarget = getQueryParam('target') || '';
-
-        // アーカイブか日次ビューアーかを振り分け
         const baseUrl = isArchive ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
 
         const separator = baseUrl.includes('?') ? '&' : '?';
