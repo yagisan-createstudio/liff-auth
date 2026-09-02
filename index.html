@@ -78,7 +78,10 @@
 
   <script>
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
-    const GAS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbx7ZVIc7yvOJMQAqDzTOhMTHW819eZkpKvQaawaW4JhaDvNzuxDOEGnCnp5eNiHQDfp/exec';
+
+    // 転送先GASのエンドポイント一覧
+    const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbx7ZVIc7yvOJMQAqDzTOhMTHW819eZkpKvQaawaW4JhaDvNzuxDOEGnCnp5eNiHQDfp/exec';
+    const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
 
     window.onload = function() {
       main();
@@ -100,8 +103,22 @@
           throw new Error('LINE UIDの取得に失敗しました');
         }
 
-        const separator = GAS_ENDPOINT_URL.includes('?') ? '&' : '?';
-        const targetUrl = `${GAS_ENDPOINT_URL}${separator}line_uid=${encodeURIComponent(lineUid)}`;
+        // 現在のURLパラメータから振分け先を判定
+        const params = new URLSearchParams(window.location.search);
+        const appType = params.get('app'); // "archive" ならアーカイブサイトへ
+        const dateTarget = params.get('target') || ''; // 日付指定等があれば引き継ぐ
+
+        let baseUrl = URL_TODAY_VIEWER;
+        if (appType === 'archive') {
+          baseUrl = URL_ARCHIVE_SITE;
+        }
+
+        // パラメータを付与してGASへリダイレクト
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid)}`;
+        if (dateTarget) {
+          targetUrl += `&target=${encodeURIComponent(dateTarget)}`;
+        }
 
         window.location.replace(targetUrl);
 
