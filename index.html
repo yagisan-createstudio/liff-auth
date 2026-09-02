@@ -2,37 +2,83 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ログイン中...</title>
-  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>認証中</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body {
-      margin: 0; padding: 0; background: #000; color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      height: 100vh; overflow: hidden;
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    html, body {
+      background-color: #000;
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
-    .spinner {
-      width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.2);
-      border-top: 3px solid #fff; border-radius: 50%;
-      animation: spin 0.8s linear infinite; margin-bottom: 20px;
+    .app-spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      border-top: 3px solid #fff;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
     }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .msg { font-size: 14px; font-weight: 600; color: #ccc; letter-spacing: 0.5px; }
-    .err-msg { color: #ff6b6b; font-size: 12px; margin-top: 15px; max-width: 80%; text-align: center; display: none; }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .loader-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: #aaa;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    .dots-bounce {
+      display: inline-flex;
+      margin-left: 2px;
+      gap: 1.5px;
+    }
+    .dots-bounce span {
+      display: inline-block;
+      animation: dotBounce 1.4s infinite ease-in-out both;
+      font-size: 14px;
+      line-height: 1;
+      color: inherit;
+    }
+    .dots-bounce span:nth-child(1) { animation-delay: -0.32s; }
+    .dots-bounce span:nth-child(2) { animation-delay: -0.16s; }
+    .dots-bounce span:nth-child(3) { animation-delay: 0s; }
+    @keyframes dotBounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-4px); }
+    }
+    .err-msg {
+      color: #ff3b30;
+      font-size: 13px;
+      margin-top: 14px;
+      max-width: 80%;
+      text-align: center;
+      display: none;
+      line-height: 1.4;
+    }
   </style>
 </head>
 <body>
-  <div class="spinner"></div>
-  <div class="msg" id="status-text">LINE認証中...</div>
+  <div class="app-spinner" id="spinner"></div>
+  <div class="loader-text" id="loader-box">
+    <span id="status-text">認証中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
+  </div>
   <div class="err-msg" id="err-text"></div>
 
   <script>
-    // ★ LINE DevelopersでLIFF作成後に取得できるIDに後ほど書き換えます
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
-    
-    // ★ 単日ビューアーのGASデプロイURL
-    const GAS_VIEWER_URL = 'https://script.google.com/macros/s/AKfycbx7ZVIc7yvOJMQAqDzTOhMTHW819eZkpKvQaawaW4JhaDvNzuxDOEGnCnp5eNiHQDfp/exec';
+    const GAS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbx7ZVIc7yvOJMQAqDzTOhMTHW819eZkpKvQaawaW4JhaDvNzuxDOEGnCnp5eNiHQDfp/exec';
 
     window.onload = function() {
       main();
@@ -47,17 +93,25 @@
           return;
         }
 
-        document.getElementById('status-text').innerText = 'アカウント照合中...';
-        const profile = await liff.getProfile();
-        const lineUserId = profile.userId;
+        document.getElementById('status-text').innerText = 'アカウント照合中';
 
-        const redirectUrl = GAS_VIEWER_URL + (GAS_VIEWER_URL.includes('?') ? '&' : '?') + 'line_uid=' + encodeURIComponent(lineUserId);
-        window.location.replace(redirectUrl);
+        const profile = await liff.getProfile();
+        const lineUid = profile.userId;
+
+        if (!lineUid) {
+          throw new Error('LINE UIDの取得に失敗しました');
+        }
+
+        const separator = GAS_ENDPOINT_URL.includes('?') ? '&' : '?';
+        const targetUrl = `${GAS_ENDPOINT_URL}${separator}line_uid=${encodeURIComponent(lineUid)}`;
+
+        window.location.replace(targetUrl);
 
       } catch (err) {
-        document.getElementById('status-text').innerText = '認証に失敗しました';
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('loader-box').style.display = 'none';
         const errEl = document.getElementById('err-text');
-        errEl.innerText = err.message || JSON.stringify(err);
+        errEl.innerText = '認証に失敗しました: ' + (err.message || err);
         errEl.style.display = 'block';
       }
     }
