@@ -36,7 +36,7 @@
       border-radius: 16px;
       padding: 2px;
       gap: 2px;
-      z-index: 10;
+      z-index: 20;
     }
     .lang-btn {
       border: none;
@@ -57,7 +57,13 @@
     .icon {
       font-size: 48px;
       margin-bottom: 16px;
+      transition: transform 0.15s ease;
+    }
+    .icon.floating {
       animation: float 2s ease-in-out infinite;
+    }
+    .icon.pulse {
+      transform: scale(1.18);
     }
     @keyframes float {
       0%, 100% { transform: translateY(0); }
@@ -75,26 +81,27 @@
       color: #aaa;
     }
 
-    /* ★ 四隅の透明タップ検知エリア */
+    /* ★ 判定エリアを110pxに拡大し、スマホのタッチを最優先で検知 */
     .secret-corner {
       position: absolute;
-      width: 80px;
-      height: 80px;
-      z-index: 5;
+      width: 110px;
+      height: 110px;
+      z-index: 10;
       background: transparent;
+      touch-action: manipulation;
     }
     #corner-tl { top: 0; left: 0; }
-    #corner-tr { top: 0; right: 0; }
+    #corner-tr { top: 0; right: 0; width: 140px; } /* 右上は言語ボタン周辺も含めて広めに判定 */
     #corner-bl { bottom: 0; left: 0; }
     #corner-br { bottom: 0; right: 0; }
   </style>
 </head>
 <body>
-  <!-- 四隅の不可視トリガー -->
-  <div class="secret-corner" id="corner-tl" onclick="handleSecretTap('TL')"></div>
-  <div class="secret-corner" id="corner-tr" onclick="handleSecretTap('TR')"></div>
-  <div class="secret-corner" id="corner-bl" onclick="handleSecretTap('BL')"></div>
-  <div class="secret-corner" id="corner-br" onclick="handleSecretTap('BR')"></div>
+  <!-- 四隅の不可視トリガー（touchstart & click 両対応） -->
+  <div class="secret-corner" id="corner-tl"></div>
+  <div class="secret-corner" id="corner-tr"></div>
+  <div class="secret-corner" id="corner-bl"></div>
+  <div class="secret-corner" id="corner-br"></div>
 
   <!-- 言語切替ボタン -->
   <div class="lang-switcher">
@@ -102,19 +109,15 @@
     <button type="button" id="btn-en" class="lang-btn" onclick="switchLang('en')">EN</button>
   </div>
 
-  <div class="icon" id="main-icon">🚧</div>
+  <div class="icon floating" id="main-icon">🚧</div>
   <h1 id="m-title">システムメンテナンス中</h1>
   <p id="m-desc">現在、プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
 
   <script>
-    // ==========================================
-    // ★ 通常運用時のLIFF設定 & GASのURL
-    // ==========================================
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
     const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
 
-    // クエリパラメータ取得用
     function getQueryParam(key) {
       const urlParams = new URLSearchParams(window.location.search);
       let val = urlParams.get(key);
@@ -136,23 +139,51 @@
         val = hashParams.get(key);
         if (val) return val;
       }
-
       return null;
     }
 
     // ==========================================
     // ★ 管理者用バイパス（隠しコマンド）処理
     // ==========================================
-    // 正しい入力手順: 左上(TL) ➔ 右下(BR) ➔ 左下(BL) ➔ 右上(TR)
+    // 入力手順: 左上(TL) ➔ 右下(BR) ➔ 左下(BL) ➔ 右上(TR)
     const SECRET_PATTERN = ['TL', 'BR', 'BL', 'TR'];
     let currentInputSequence = [];
     let secretTimer = null;
     let isBypassing = false;
 
-    function handleSecretTap(cornerId) {
+    // タップイベントを登録（touchstart優先、二重発火防止）
+    function attachCornerEvents(elementId, cornerCode) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+
+      let lastTouchTime = 0;
+      const handleTrigger = (e) => {
+        // 言語ボタン（JP/EN）自体のタップなら無視
+        if (e.target.closest('.lang-switcher')) return;
+
+        const now = Date.now();
+        if (now - lastTouchTime < 350) return; // 連打・二重発火ガード
+        lastTouchTime = now;
+
+        e.stopPropagation();
+        onCornerTriggered(cornerCode);
+      };
+
+      el.addEventListener('touchstart', handleTrigger, { passive: true });
+      el.addEventListener('click', handleTrigger);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      attachCornerEvents('corner-tl', 'TL');
+      attachCornerEvents('corner-tr', 'TR');
+      attachCornerEvents('corner-bl', 'BL');
+      attachCornerEvents('corner-br', 'BR');
+    });
+
+    function onCornerTriggered(cornerId) {
       if (isBypassing) return;
       clearTimeout(secretTimer);
-      
+
       secretTimer = setTimeout(() => {
         currentInputSequence = [];
       }, 5000);
@@ -162,9 +193,14 @@
       if (cornerId === expectedNext) {
         currentInputSequence.push(cornerId);
 
+        // ★ 入力が1段階進むたびに「🚧」アイコンが一瞬ポッと跳ねる（フィードバック）
+        pulseIcon();
+
         if (currentInputSequence.length === SECRET_PATTERN.length) {
           isBypassing = true;
-          if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+          if (navigator.vibrate) {
+            try { navigator.vibrate([40, 60, 40]); } catch (e) {}
+          }
           
           document.getElementById('m-title').innerText = "管理者モードで認証中...";
           document.getElementById('m-desc').innerHTML = "LINEアカウントを照合してビューアーを起動します。<br>少々お待ちください...";
@@ -174,14 +210,30 @@
       } else {
         if (cornerId === SECRET_PATTERN[0]) {
           currentInputSequence = [cornerId];
+          pulseIcon();
         } else {
           currentInputSequence = [];
         }
       }
     }
 
-    // LIFFでLINE UIDを取得してGASへリダイレクト
+    function pulseIcon() {
+      const icon = document.getElementById('main-icon');
+      if (!icon) return;
+      icon.classList.remove('floating');
+      icon.classList.add('pulse');
+      setTimeout(() => {
+        icon.classList.remove('pulse');
+        if (!isBypassing) icon.classList.add('floating');
+      }, 150);
+    }
+
     async function executeBypassRedirect() {
+      const appType = getQueryParam('app');
+      const isArchive = (appType === 'archive');
+      const dateTarget = getQueryParam('target') || '';
+      const baseUrl = isArchive ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
+
       try {
         await liff.init({ liffId: MY_LIFF_ID });
 
@@ -193,11 +245,6 @@
         const profile = await liff.getProfile();
         const lineUid = profile.userId;
 
-        const appType = getQueryParam('app');
-        const isArchive = (appType === 'archive');
-        const dateTarget = getQueryParam('target') || '';
-        const baseUrl = isArchive ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
-
         const separator = baseUrl.includes('?') ? '&' : '?';
         let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid || '')}`;
         if (dateTarget) {
@@ -206,16 +253,12 @@
 
         window.location.replace(targetUrl);
       } catch (err) {
-        // LIFF環境外（PCブラウザ等）で開いている場合はUIDなしで直接遷移
-        const appType = getQueryParam('app');
-        const baseUrl = (appType === 'archive') ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
+        // LIFF外（PCブラウザ等）の場合はそのまま遷移
         window.location.replace(baseUrl);
       }
     }
 
-    // ==========================================
-    // 言語設定辞書
-    // ==========================================
+    // 辞書
     const texts = {
       ja: {
         pageTitle: "現在、利用できません",
