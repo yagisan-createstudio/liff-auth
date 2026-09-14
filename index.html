@@ -150,7 +150,7 @@
       line-height: 1;
       padding: 2px 6px;
     }
-    /* 桁数推測を完全に防ぐプレーンなパスワード入力欄 */
+    /* プレースホルダーなし、桁数推測不可 */
     .admin-pwd-input {
       width: 100%;
       padding: 12px 14px;
@@ -205,7 +205,7 @@
   <h1 id="m-title">システムメンテナンス中</h1>
   <p id="m-desc">現在、iOS 27対応に向けた<br>プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
 
-  <!-- ★ 管理者バイパス用パスワードモーダル（英語化 & プレースホルダー完全秘匿） -->
+  <!-- ★ 管理者バイパス用パスワードモーダル -->
   <div class="admin-modal-overlay" id="admin-overlay" onclick="closeAdminModal()"></div>
   <div class="admin-modal-dialog" id="admin-dialog">
     <div class="modal-head">
@@ -213,7 +213,6 @@
       <button type="button" class="modal-close-btn" onclick="closeAdminModal()">✕</button>
     </div>
     <form onsubmit="handleAdminSubmit(event)">
-      <!-- プレースホルダーなし、桁数推測不可 -->
       <input type="password" id="admin-pass-input" class="admin-pwd-input" maxlength="32" inputmode="numeric" autocomplete="off">
       <div id="admin-err-msg" class="modal-err-text"></div>
       <button type="submit" id="admin-btn" class="admin-submit-btn">Authenticate</button>
@@ -225,8 +224,8 @@
     const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
     
-    // ★「1126」のSHA-256ハッシュ値
-    const AUTH_HASH = '6c888923a3d2424cf3832c3fbeee9a0446b7a80b06b6377e8a9391b10a273b18';
+    // ★ 正しい「1126」のSHA-256ハッシュ値に修正完了
+    const AUTH_HASH = '5817ae4948371f9b6b7d94615c0704e6a13ba5a773938351ebd832d0fcdbdf2f';
 
     async function sha256(message) {
       const msgBuffer = new TextEncoder().encode(message);
@@ -317,7 +316,9 @@
       const input = document.getElementById('admin-pass-input');
       const err = document.getElementById('admin-err-msg');
       const btn = document.getElementById('admin-btn');
-      const val = input.value.trim();
+      
+      // 全角数字や空白を自動で半角に整える
+      const val = input.value.trim().normalize('NFKC');
 
       btn.disabled = true;
 
