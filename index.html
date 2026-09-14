@@ -89,7 +89,7 @@
       color: #aaa;
     }
 
-    /* ★ 管理者認証モーダル */
+    /* 管理者認証モーダル */
     .admin-modal-overlay {
       display: none;
       position: fixed;
@@ -115,7 +115,7 @@
       left: 50%;
       transform: translate(-50%, -50%) scale(0.95);
       width: 85%;
-      max-width: 310px;
+      max-width: 320px;
       background: #1e1e1e;
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 18px;
@@ -133,12 +133,13 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 16px;
     }
     .modal-head-title {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
       color: #ffffff;
+      letter-spacing: 0.3px;
     }
     .modal-close-btn {
       background: none;
@@ -149,19 +150,19 @@
       line-height: 1;
       padding: 2px 6px;
     }
+    /* 桁数推測を完全に防ぐプレーンなパスワード入力欄 */
     .admin-pwd-input {
       width: 100%;
-      padding: 12px;
+      padding: 12px 14px;
       background: #2a2a2a;
       border: 1.5px solid #444;
       border-radius: 10px;
       color: #ffffff;
-      font-size: 18px;
-      letter-spacing: 4px;
+      font-size: 16px;
       text-align: center;
       outline: none;
       box-sizing: border-box;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .admin-pwd-input:focus {
       border-color: #8b5cf6;
@@ -202,19 +203,20 @@
   </div>
 
   <h1 id="m-title">システムメンテナンス中</h1>
-  <p id="m-desc">現在、プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
+  <p id="m-desc">現在、iOS 27対応に向けた<br>プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
 
-  <!-- ★ 管理者バイパス用パスワードモーダル -->
+  <!-- ★ 管理者バイパス用パスワードモーダル（英語化 & プレースホルダー完全秘匿） -->
   <div class="admin-modal-overlay" id="admin-overlay" onclick="closeAdminModal()"></div>
   <div class="admin-modal-dialog" id="admin-dialog">
     <div class="modal-head">
-      <div class="modal-head-title">管理者バイパス認証</div>
+      <div class="modal-head-title">Admin Bypass Authentication</div>
       <button type="button" class="modal-close-btn" onclick="closeAdminModal()">✕</button>
     </div>
     <form onsubmit="handleAdminSubmit(event)">
-      <input type="password" id="admin-pass-input" class="admin-pwd-input" placeholder="••••" maxlength="8" inputmode="numeric" autocomplete="off">
+      <!-- プレースホルダーなし、桁数推測不可 -->
+      <input type="password" id="admin-pass-input" class="admin-pwd-input" maxlength="32" inputmode="numeric" autocomplete="off">
       <div id="admin-err-msg" class="modal-err-text"></div>
-      <button type="submit" id="admin-btn" class="admin-submit-btn">認証</button>
+      <button type="submit" id="admin-btn" class="admin-submit-btn">Authenticate</button>
     </form>
   </div>
 
@@ -223,8 +225,15 @@
     const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
     
-    // ★ 正しい管理者パスワード
-    const CORRECT_PASS = '1126';
+    // ★「1126」のSHA-256ハッシュ値
+    const AUTH_HASH = '6c888923a3d2424cf3832c3fbeee9a0446b7a80b06b6377e8a9391b10a273b18';
+
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
 
     function getQueryParam(key) {
       const urlParams = new URLSearchParams(window.location.search);
@@ -250,9 +259,7 @@
       return null;
     }
 
-    // ==========================================
-    // ★ アイコン5回連打 ➔ パスワードモーダル表示
-    // ==========================================
+    // アイコン5回連打判定
     let tapCount = 0;
     let tapResetTimer = null;
     let isBypassing = false;
@@ -266,7 +273,6 @@
 
       tapCount++;
 
-      // タップ時アニメーション
       iconEl.classList.remove('floating');
       iconEl.classList.add('tapped');
       setTimeout(() => {
@@ -280,7 +286,6 @@
         if (!isBypassing) iconEl.classList.add('floating');
       }, 2000);
 
-      // 5回達成でモーダルオープン
       if (tapCount >= 5) {
         tapCount = 0;
         clearTimeout(tapResetTimer);
@@ -307,18 +312,21 @@
       document.getElementById('admin-err-msg').innerText = '';
     }
 
-    function handleAdminSubmit(e) {
+    async function handleAdminSubmit(e) {
       if (e) e.preventDefault();
       const input = document.getElementById('admin-pass-input');
       const err = document.getElementById('admin-err-msg');
       const btn = document.getElementById('admin-btn');
       const val = input.value.trim();
 
-      if (val === CORRECT_PASS) {
+      btn.disabled = true;
+
+      const inputHash = await sha256(val);
+
+      if (inputHash === AUTH_HASH) {
         isBypassing = true;
         err.innerText = '';
-        btn.disabled = true;
-        btn.innerText = '認証成功・起動中...';
+        btn.innerText = 'Verifying...';
         
         if (navigator.vibrate) {
           try { navigator.vibrate([40, 60, 40]); } catch (err) {}
@@ -328,7 +336,8 @@
           executeBypassRedirect();
         }, 300);
       } else {
-        err.innerText = 'パスワードが違います';
+        btn.disabled = false;
+        err.innerText = 'Invalid passcode';
         input.value = '';
         input.focus();
         if (navigator.vibrate) {
@@ -372,12 +381,12 @@
       ja: {
         pageTitle: "現在、利用できません",
         title: "システムメンテナンス中",
-        desc: "現在、プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。"
+        desc: "現在、iOS 27対応に向けた<br>プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。"
       },
       en: {
         pageTitle: "Service Unavailable",
         title: "Under Scheduled Maintenance",
-        desc: "We are currently performing<br>system updates.<br><br>Maintenance is scheduled to finish around<br><strong>Sep 18 at 22:00</strong>.<br>We apologize for the inconvenience<br>and appreciate your patience."
+        desc: "We are currently performing system updates<br>for iOS 27 support.<br><br>Maintenance is scheduled to finish around<br><strong>Sep 18 at 22:00</strong>.<br><br>We apologize for the inconvenience<br>and appreciate your patience."
       }
     };
 
