@@ -3,161 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title id="page-title">リダイレクト中</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <title>システムメンテナンス中</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    html, body {
-      background-color: #000;
-      color: #fff;
-      height: 100vh;
-      overflow: hidden;
+    body {
+      background-color: #000000;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      align-items: center;
-    }
-    .app-spinner {
-      width: 36px;
-      height: 36px;
-      border: 3px solid rgba(255, 255, 255, 0.2);
-      border-top: 3px solid #fff;
-      border-radius: 50%;
-      animation: spin 0.75s linear infinite;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    .loader-text {
-      font-size: 13px;
-      font-weight: 600;
-      color: #aaa;
-      letter-spacing: 0.3px;
-      display: flex;
       align-items: center;
       justify-content: center;
-      margin-top: 16px;
-    }
-    .dots-bounce {
-      display: inline-flex;
-      margin-left: 2px;
-      gap: 1.5px;
-    }
-    .dots-bounce span {
-      display: inline-block;
-      animation: dotBounce 1.4s infinite ease-in-out both;
-      font-size: 14px;
-      line-height: 1;
-      color: inherit;
-    }
-    .dots-bounce span:nth-child(1) { animation-delay: -0.32s; }
-    .dots-bounce span:nth-child(2) { animation-delay: -0.16s; }
-    .dots-bounce span:nth-child(3) { animation-delay: 0s; }
-    @keyframes dotBounce {
-      0%, 80%, 100% { transform: translateY(0); }
-      40% { transform: translateY(-4px); }
-    }
-    .err-msg {
-      color: #ff3b30;
-      font-size: 13px;
-      margin-top: 14px;
-      max-width: 80%;
+      height: 100vh;
+      margin: 0;
       text-align: center;
-      display: none;
-      line-height: 1.4;
+      padding: 20px;
+    }
+    .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      animation: float 2s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+    p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #aaa;
     }
   </style>
 </head>
 <body>
-  <div class="app-spinner" id="spinner"></div>
-  <div class="loader-text" id="loader-box">
-    <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
-  </div>
-  <div class="err-msg" id="err-text"></div>
+  <div class="icon">🛠️</div>
+  <h1>システムメンテナンス中</h1>
+  <p>現在、システムのアップデート作業を行っております。<br>機能の追加・改善が完了するまで<br>今しばらくお待ちください。</p>
 
   <script>
-    const MY_LIFF_ID = '2011370236-GhC6I5kJ';
-
-    // ★ 新規デプロイされたURLに更新
-    const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
-    const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
-
-    function getQueryParam(key) {
-      const urlParams = new URLSearchParams(window.location.search);
-      let val = urlParams.get(key);
-      if (val) return val;
-
-      const liffState = urlParams.get('liff.state');
-      if (liffState) {
-        const decodedState = decodeURIComponent(liffState);
-        const stateQueryIndex = decodedState.indexOf('?');
-        if (stateQueryIndex !== -1) {
-          const stateParams = new URLSearchParams(decodedState.substring(stateQueryIndex));
-          val = stateParams.get(key);
-          if (val) return val;
-        }
-      }
-
-      if (window.location.hash) {
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        val = hashParams.get(key);
-        if (val) return val;
-      }
-
-      return null;
-    }
-
-    const appType = getQueryParam('app');
-    const isArchive = (appType === 'archive');
-
-    if (isArchive) {
-      document.getElementById('status-text').innerText = 'リダイレクト中';
-      document.getElementById('page-title').innerText = 'リダイレクト中';
-    } else {
-      document.getElementById('status-text').innerText = 'リダイレクト中';
-      document.getElementById('page-title').innerText = 'リダイレクト中';
-    }
-
-    window.onload = function() {
-      main();
-    };
-
-    async function main() {
-      try {
-        await liff.init({ liffId: MY_LIFF_ID });
-
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
-
-        const profile = await liff.getProfile();
-        const lineUid = profile.userId;
-
-        if (!lineUid) {
-          throw new Error('LINE UIDの取得に失敗しました');
-        }
-
-        const dateTarget = getQueryParam('target') || '';
-        const baseUrl = isArchive ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
-
-        const separator = baseUrl.includes('?') ? '&' : '?';
-        let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid)}`;
-        if (dateTarget) {
-          targetUrl += `&target=${encodeURIComponent(dateTarget)}`;
-        }
-
-        window.location.replace(targetUrl);
-
-      } catch (err) {
-        document.getElementById('spinner').style.display = 'none';
-        document.getElementById('loader-box').style.display = 'none';
-        const errEl = document.getElementById('err-text');
-        errEl.innerText = '認証に失敗しました: ' + (err.message || err);
-        errEl.style.display = 'block';
-      }
-    }
+    // ==========================================
+    // ⚠️ 遷移ストップ中
+    // アップデートが完了したら、以下のスラッシュ2つ（//）を消して
+    // URLを元のビューアー（GAS）のURLに戻してください。
+    // ==========================================
+    
+    // window.location.href = "https://script.google.com/macros/s/あなたのGASのURL/exec";
+    
   </script>
 </body>
 </html>
