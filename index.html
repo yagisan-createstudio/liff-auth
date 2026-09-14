@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title id="page-title">現在、利用できません</title>
+  <!-- ★ LINE LIFF SDK -->
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body {
@@ -19,6 +21,9 @@
       text-align: center;
       padding: 20px;
       position: relative;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
     }
     /* 右上の言語切り替えピルスイッチ */
     .lang-switcher {
@@ -31,6 +36,7 @@
       border-radius: 16px;
       padding: 2px;
       gap: 2px;
+      z-index: 10;
     }
     .lang-btn {
       border: none;
@@ -68,21 +74,148 @@
       line-height: 1.6;
       color: #aaa;
     }
+
+    /* ★ 四隅の透明タップ検知エリア */
+    .secret-corner {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      z-index: 5;
+      background: transparent;
+    }
+    #corner-tl { top: 0; left: 0; }
+    #corner-tr { top: 0; right: 0; }
+    #corner-bl { bottom: 0; left: 0; }
+    #corner-br { bottom: 0; right: 0; }
   </style>
 </head>
 <body>
+  <!-- 四隅の不可視トリガー -->
+  <div class="secret-corner" id="corner-tl" onclick="handleSecretTap('TL')"></div>
+  <div class="secret-corner" id="corner-tr" onclick="handleSecretTap('TR')"></div>
+  <div class="secret-corner" id="corner-bl" onclick="handleSecretTap('BL')"></div>
+  <div class="secret-corner" id="corner-br" onclick="handleSecretTap('BR')"></div>
+
   <!-- 言語切替ボタン -->
   <div class="lang-switcher">
     <button type="button" id="btn-ja" class="lang-btn active" onclick="switchLang('ja')">JP</button>
     <button type="button" id="btn-en" class="lang-btn" onclick="switchLang('en')">EN</button>
   </div>
 
-  <div class="icon">🚧</div>
+  <div class="icon" id="main-icon">🚧</div>
   <h1 id="m-title">システムメンテナンス中</h1>
   <p id="m-desc">現在、プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
 
   <script>
-    // 辞書オブジェクト
+    // ==========================================
+    // ★ 通常運用時のLIFF設定 & GASのURL
+    // ==========================================
+    const MY_LIFF_ID = '2011370236-GhC6I5kJ';
+    const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
+    const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
+
+    // クエリパラメータ取得用
+    function getQueryParam(key) {
+      const urlParams = new URLSearchParams(window.location.search);
+      let val = urlParams.get(key);
+      if (val) return val;
+
+      const liffState = urlParams.get('liff.state');
+      if (liffState) {
+        const decodedState = decodeURIComponent(liffState);
+        const stateQueryIndex = decodedState.indexOf('?');
+        if (stateQueryIndex !== -1) {
+          const stateParams = new URLSearchParams(decodedState.substring(stateQueryIndex));
+          val = stateParams.get(key);
+          if (val) return val;
+        }
+      }
+
+      if (window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        val = hashParams.get(key);
+        if (val) return val;
+      }
+
+      return null;
+    }
+
+    // ==========================================
+    // ★ 管理者用バイパス（隠しコマンド）処理
+    // ==========================================
+    // 正しい入力手順: 左上(TL) ➔ 右下(BR) ➔ 左下(BL) ➔ 右上(TR)
+    const SECRET_PATTERN = ['TL', 'BR', 'BL', 'TR'];
+    let currentInputSequence = [];
+    let secretTimer = null;
+    let isBypassing = false;
+
+    function handleSecretTap(cornerId) {
+      if (isBypassing) return;
+      clearTimeout(secretTimer);
+      
+      secretTimer = setTimeout(() => {
+        currentInputSequence = [];
+      }, 5000);
+
+      const expectedNext = SECRET_PATTERN[currentInputSequence.length];
+
+      if (cornerId === expectedNext) {
+        currentInputSequence.push(cornerId);
+
+        if (currentInputSequence.length === SECRET_PATTERN.length) {
+          isBypassing = true;
+          if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+          
+          document.getElementById('m-title').innerText = "管理者モードで認証中...";
+          document.getElementById('m-desc').innerHTML = "LINEアカウントを照合してビューアーを起動します。<br>少々お待ちください...";
+          
+          executeBypassRedirect();
+        }
+      } else {
+        if (cornerId === SECRET_PATTERN[0]) {
+          currentInputSequence = [cornerId];
+        } else {
+          currentInputSequence = [];
+        }
+      }
+    }
+
+    // LIFFでLINE UIDを取得してGASへリダイレクト
+    async function executeBypassRedirect() {
+      try {
+        await liff.init({ liffId: MY_LIFF_ID });
+
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+
+        const profile = await liff.getProfile();
+        const lineUid = profile.userId;
+
+        const appType = getQueryParam('app');
+        const isArchive = (appType === 'archive');
+        const dateTarget = getQueryParam('target') || '';
+        const baseUrl = isArchive ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
+
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid || '')}`;
+        if (dateTarget) {
+          targetUrl += `&target=${encodeURIComponent(dateTarget)}`;
+        }
+
+        window.location.replace(targetUrl);
+      } catch (err) {
+        // LIFF環境外（PCブラウザ等）で開いている場合はUIDなしで直接遷移
+        const appType = getQueryParam('app');
+        const baseUrl = (appType === 'archive') ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
+        window.location.replace(baseUrl);
+      }
+    }
+
+    // ==========================================
+    // 言語設定辞書
+    // ==========================================
     const texts = {
       ja: {
         pageTitle: "現在、利用できません",
@@ -97,6 +230,7 @@
     };
 
     function switchLang(lang) {
+      if (isBypassing) return;
       const data = texts[lang] || texts.ja;
       document.documentElement.lang = lang;
       document.getElementById('page-title').innerText = data.pageTitle;
@@ -113,14 +247,6 @@
         btnEn.classList.remove('active');
       }
     }
-
-    // ==========================================
-    // ⚠️ 遷移ストップ中
-    // アップデートが完了したら、以下のスラッシュ2つ（//）を消して
-    // URLを元のビューアー（GAS）のURLに戻してください。
-    // ==========================================
-    
-    // window.location.href = "https://script.google.com/macros/s/あなたのGASのURL/exec";
   </script>
 </body>
 </html>
