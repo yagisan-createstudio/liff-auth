@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>現在、利用できません</title>
+  <title id="page-title">現在、利用できません</title>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body {
       background-color: #000000;
       color: #ffffff;
@@ -17,6 +18,35 @@
       margin: 0;
       text-align: center;
       padding: 20px;
+      position: relative;
+    }
+    /* 右上の言語切り替えピルスイッチ */
+    .lang-switcher {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: inline-flex;
+      background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .lang-btn {
+      border: none;
+      background: transparent;
+      padding: 4px 10px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #888888;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .lang-btn.active {
+      background: #333333;
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
     .icon {
       font-size: 48px;
@@ -41,11 +71,49 @@
   </style>
 </head>
 <body>
+  <!-- 言語切替ボタン -->
+  <div class="lang-switcher">
+    <button type="button" id="btn-ja" class="lang-btn active" onclick="switchLang('ja')">JP</button>
+    <button type="button" id="btn-en" class="lang-btn" onclick="switchLang('en')">EN</button>
+  </div>
+
   <div class="icon">🚧</div>
-  <h1>システムメンテナンス中</h1>
-  <p>現在、プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
+  <h1 id="m-title">システムメンテナンス中</h1>
+  <p id="m-desc">現在、プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
 
   <script>
+    // 辞書オブジェクト
+    const texts = {
+      ja: {
+        pageTitle: "現在、利用できません",
+        title: "システムメンテナンス中",
+        desc: "現在、プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。"
+      },
+      en: {
+        pageTitle: "Service Unavailable",
+        title: "Under Scheduled Maintenance",
+        desc: "We are currently performing system updates.<br><br>Maintenance is scheduled to be completed around <strong>Sep 18 at 22:00</strong>.<br>We apologize for any inconvenience and appreciate your patience."
+      }
+    };
+
+    function switchLang(lang) {
+      const data = texts[lang] || texts.ja;
+      document.documentElement.lang = lang;
+      document.getElementById('page-title').innerText = data.pageTitle;
+      document.getElementById('m-title').innerText = data.title;
+      document.getElementById('m-desc').innerHTML = data.desc;
+
+      const btnJa = document.getElementById('btn-ja');
+      const btnEn = document.getElementById('btn-en');
+      if (lang === 'en') {
+        btnJa.classList.remove('active');
+        btnEn.classList.add('active');
+      } else {
+        btnJa.classList.add('active');
+        btnEn.classList.remove('active');
+      }
+    }
+
     // ==========================================
     // ⚠️ 遷移ストップ中
     // アップデートが完了したら、以下のスラッシュ2つ（//）を消して
@@ -53,7 +121,6 @@
     // ==========================================
     
     // window.location.href = "https://script.google.com/macros/s/あなたのGASのURL/exec";
-    
   </script>
 </body>
 </html>
