@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>システムメンテナンス中</title>
+  <style>
+    body {
+      background-color: #000000;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+      padding: 20px;
+    }
+    .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      animation: float 2s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+    p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <div class="icon">🛠️</div>
+  <h1>システムメンテナンス中</h1>
+  <p>現在、システムのアップデート作業を行っております。<br>機能の追加・改善が完了するまで<br>今しばらくお待ちください。</p>
+
+  <script>
+    // ==========================================
+    // ⚠️ 遷移ストップ中
+    // アップデートが完了したら、以下のスラッシュ2つ（//）を消して
+    // URLを元のビューアー（GAS）のURLに戻してください。
+    // ==========================================
+    
+    // window.location.href = "https://script.google.com/macros/s/あなたのGASのURL/exec";
+    
+  </script>
+</body>
+</html>
