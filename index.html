@@ -8,37 +8,24 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body {
+    body {
       background-color: #000000;
       color: #ffffff;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      width: 100vw;
-      height: 100vh;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: none;
-    }
-
-    /* 画面全体のタッチ検知専用レイヤー（最前面に近い位置） */
-    #touch-surface {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 10;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      height: 100vh;
+      margin: 0;
       text-align: center;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
     }
-
-    /* 右上の言語切り替えピルスイッチ（タッチレイヤーよりさらに上） */
+    /* 右上の言語切り替えピルスイッチ */
     .lang-switcher {
       position: absolute;
       top: 16px;
@@ -49,8 +36,7 @@
       border-radius: 16px;
       padding: 2px;
       gap: 2px;
-      z-index: 30;
-      pointer-events: auto;
+      z-index: 20;
     }
     .lang-btn {
       border: none;
@@ -68,16 +54,24 @@
       color: #ffffff;
       box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
+    /* ★ アイコン（5回タップ領域） */
+    .icon-wrapper {
+      padding: 15px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
     .icon {
       font-size: 48px;
-      margin-bottom: 16px;
-      transition: transform 0.15s ease;
+      transition: transform 0.12s ease;
     }
     .icon.floating {
       animation: float 2s ease-in-out infinite;
     }
-    .icon.pulse {
-      transform: scale(1.25);
+    .icon.tapped {
+      transform: scale(0.85);
     }
     @keyframes float {
       0%, 100% { transform: translateY(0); }
@@ -95,49 +89,142 @@
       color: #aaa;
     }
 
-    /* 角を正しく押した時に一瞬だけ光る極小インジケーター（目立たない白点） */
-    .tap-hint {
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
+    /* ★ 管理者認証モーダル */
+    .admin-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 1000;
       opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s ease;
-      z-index: 5;
+      transition: opacity 0.2s ease;
     }
-    #hint-tl { top: 12px; left: 12px; }
-    #hint-tr { top: 12px; right: 80px; }
-    #hint-bl { bottom: 12px; left: 12px; }
-    #hint-br { bottom: 12px; right: 12px; }
-    .tap-hint.show { opacity: 1; }
+    .admin-modal-overlay.active {
+      display: block;
+      opacity: 1;
+    }
+    .admin-modal-dialog {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.95);
+      width: 85%;
+      max-width: 310px;
+      background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 18px;
+      padding: 22px 20px;
+      z-index: 1001;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6);
+      text-align: center;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .admin-modal-dialog.active {
+      display: block;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .modal-head-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .modal-close-btn {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 6px;
+    }
+    .admin-pwd-input {
+      width: 100%;
+      padding: 12px;
+      background: #2a2a2a;
+      border: 1.5px solid #444;
+      border-radius: 10px;
+      color: #ffffff;
+      font-size: 18px;
+      letter-spacing: 4px;
+      text-align: center;
+      outline: none;
+      box-sizing: border-box;
+      margin-bottom: 8px;
+    }
+    .admin-pwd-input:focus {
+      border-color: #8b5cf6;
+    }
+    .modal-err-text {
+      font-size: 12px;
+      color: #ef4444;
+      min-height: 18px;
+      margin-bottom: 10px;
+    }
+    .admin-submit-btn {
+      width: 100%;
+      padding: 12px 0;
+      background: #8b5cf6;
+      border: none;
+      border-radius: 10px;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .admin-submit-btn:active {
+      opacity: 0.85;
+    }
   </style>
 </head>
 <body>
-  <!-- タップ検知インジケーター（確認用） -->
-  <div class="tap-hint" id="hint-tl"></div>
-  <div class="tap-hint" id="hint-tr"></div>
-  <div class="tap-hint" id="hint-bl"></div>
-  <div class="tap-hint" id="hint-br"></div>
-
   <!-- 言語切替ボタン -->
-  <div class="lang-switcher" id="lang-switcher-wrap">
-    <button type="button" id="btn-ja" class="lang-btn active" onclick="switchLang('ja', event)">JP</button>
-    <button type="button" id="btn-en" class="lang-btn" onclick="switchLang('en', event)">EN</button>
+  <div class="lang-switcher">
+    <button type="button" id="btn-ja" class="lang-btn active" onclick="switchLang('ja')">JP</button>
+    <button type="button" id="btn-en" class="lang-btn" onclick="switchLang('en')">EN</button>
   </div>
 
-  <!-- 全面タッチ検知サーフェス -->
-  <div id="touch-surface">
+  <!-- ★ アイコンタップエリア -->
+  <div class="icon-wrapper" id="secret-icon-btn">
     <div class="icon floating" id="main-icon">🚧</div>
-    <h1 id="m-title">システムメンテナンス中</h1>
-    <p id="m-desc">現在、プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
+  </div>
+
+  <h1 id="m-title">システムメンテナンス中</h1>
+  <p id="m-desc">現在、プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
+
+  <!-- ★ 管理者バイパス用パスワードモーダル -->
+  <div class="admin-modal-overlay" id="admin-overlay" onclick="closeAdminModal()"></div>
+  <div class="admin-modal-dialog" id="admin-dialog">
+    <div class="modal-head">
+      <div class="modal-head-title">管理者バイパス認証</div>
+      <button type="button" class="modal-close-btn" onclick="closeAdminModal()">✕</button>
+    </div>
+    <form onsubmit="handleAdminSubmit(event)">
+      <input type="password" id="admin-pass-input" class="admin-pwd-input" placeholder="••••" maxlength="8" inputmode="numeric" autocomplete="off">
+      <div id="admin-err-msg" class="modal-err-text"></div>
+      <button type="submit" id="admin-btn" class="admin-submit-btn">認証</button>
+    </form>
   </div>
 
   <script>
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
     const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
+    
+    // ★ 正しい管理者パスワード
+    const CORRECT_PASS = '1126';
 
     function getQueryParam(key) {
       const urlParams = new URLSearchParams(window.location.search);
@@ -164,108 +251,92 @@
     }
 
     // ==========================================
-    // ★ 管理者用バイパス（隠しコマンド）処理
+    // ★ アイコン5回連打 ➔ パスワードモーダル表示
     // ==========================================
-    // 入力手順: 左上(TL) ➔ 右下(BR) ➔ 左下(BL) ➔ 右上(TR)
-    const SECRET_PATTERN = ['TL', 'BR', 'BL', 'TR'];
-    let currentInputSequence = [];
-    let secretTimer = null;
+    let tapCount = 0;
+    let tapResetTimer = null;
     let isBypassing = false;
-    let lastTriggerTime = 0;
 
-    function detectCorner(clientX, clientY) {
-      const screenW = window.innerWidth;
-      const screenH = window.innerHeight;
+    const iconBtn = document.getElementById('secret-icon-btn');
+    const iconEl = document.getElementById('main-icon');
 
-      // 判定ゾーンを大胆に広げる（画面幅・高さの35%）
-      const boundX = screenW * 0.35;
-      const boundY = screenH * 0.30;
-
-      const isTop = clientY <= boundY;
-      const isBottom = clientY >= (screenH - boundY);
-      const isLeft = clientX <= boundX;
-      const isRight = clientX >= (screenW - boundX);
-
-      if (isTop && isLeft) return 'TL';
-      if (isBottom && isRight) return 'BR';
-      if (isBottom && isLeft) return 'BL';
-      // 右上判定：言語切り替えボタンの真下や左側も含め、右上の広範囲をTRとして扱う
-      if (isTop && isRight) return 'TR';
-
-      return null;
-    }
-
-    function handleTouchAction(clientX, clientY) {
+    function handleIconSecretTap(e) {
       if (isBypassing) return;
+      if (e) e.preventDefault();
 
-      const corner = detectCorner(clientX, clientY);
-      if (!corner) return;
+      tapCount++;
 
-      const now = Date.now();
-      if (now - lastTriggerTime < 250) return;
-      lastTriggerTime = now;
+      // タップ時アニメーション
+      iconEl.classList.remove('floating');
+      iconEl.classList.add('tapped');
+      setTimeout(() => {
+        iconEl.classList.remove('tapped');
+        if (!isBypassing && tapCount === 0) iconEl.classList.add('floating');
+      }, 100);
 
-      clearTimeout(secretTimer);
-      secretTimer = setTimeout(() => {
-        currentInputSequence = [];
-      }, 6000);
+      clearTimeout(tapResetTimer);
+      tapResetTimer = setTimeout(() => {
+        tapCount = 0;
+        if (!isBypassing) iconEl.classList.add('floating');
+      }, 2000);
 
-      const expectedNext = SECRET_PATTERN[currentInputSequence.length];
-
-      if (corner === expectedNext) {
-        currentInputSequence.push(corner);
-        pulseEffect(corner);
-
-        if (currentInputSequence.length === SECRET_PATTERN.length) {
-          isBypassing = true;
-          if (navigator.vibrate) {
-            try { navigator.vibrate([50, 70, 50]); } catch (e) {}
-          }
-          
-          document.getElementById('m-title').innerText = "管理者モードで認証中...";
-          document.getElementById('m-desc').innerHTML = "LINEアカウントを照合してビューアーを起動します。<br>少々お待ちください...";
-          
-          executeBypassRedirect();
-        }
-      } else {
-        if (corner === SECRET_PATTERN[0]) {
-          currentInputSequence = [corner];
-          pulseEffect(corner);
-        } else {
-          currentInputSequence = [];
-        }
+      // 5回達成でモーダルオープン
+      if (tapCount >= 5) {
+        tapCount = 0;
+        clearTimeout(tapResetTimer);
+        openAdminModal();
       }
     }
 
-    function pulseEffect(cornerCode) {
-      const icon = document.getElementById('main-icon');
-      if (icon) {
-        icon.classList.remove('floating');
-        icon.classList.add('pulse');
+    iconBtn.addEventListener('touchstart', handleIconSecretTap, { passive: false });
+    iconBtn.addEventListener('click', handleIconSecretTap);
+
+    function openAdminModal() {
+      document.getElementById('admin-overlay').classList.add('active');
+      document.getElementById('admin-dialog').classList.add('active');
+      const input = document.getElementById('admin-pass-input');
+      input.value = '';
+      document.getElementById('admin-err-msg').innerText = '';
+      setTimeout(() => input.focus(), 150);
+    }
+
+    function closeAdminModal() {
+      document.getElementById('admin-overlay').classList.remove('active');
+      document.getElementById('admin-dialog').classList.remove('active');
+      document.getElementById('admin-pass-input').value = '';
+      document.getElementById('admin-err-msg').innerText = '';
+    }
+
+    function handleAdminSubmit(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('admin-pass-input');
+      const err = document.getElementById('admin-err-msg');
+      const btn = document.getElementById('admin-btn');
+      const val = input.value.trim();
+
+      if (val === CORRECT_PASS) {
+        isBypassing = true;
+        err.innerText = '';
+        btn.disabled = true;
+        btn.innerText = '認証成功・起動中...';
+        
+        if (navigator.vibrate) {
+          try { navigator.vibrate([40, 60, 40]); } catch (err) {}
+        }
+
         setTimeout(() => {
-          icon.classList.remove('pulse');
-          if (!isBypassing) icon.classList.add('floating');
-        }, 160);
+          executeBypassRedirect();
+        }, 300);
+      } else {
+        err.innerText = 'パスワードが違います';
+        input.value = '';
+        input.focus();
+        if (navigator.vibrate) {
+          try { navigator.vibrate(100); } catch (err) {}
+        }
       }
-
-      const hint = document.getElementById('hint-' + cornerCode.toLowerCase());
-      if (hint) {
-        hint.classList.add('show');
-        setTimeout(() => hint.classList.remove('show'), 300);
-      }
+      return false;
     }
-
-    // タッチサーフェスにイベント登録（パッシブ解除して最速取得）
-    const surface = document.getElementById('touch-surface');
-    surface.addEventListener('touchstart', (e) => {
-      if (e.touches && e.touches.length > 0) {
-        handleTouchAction(e.touches[0].clientX, e.touches[0].clientY);
-      }
-    }, { passive: true });
-
-    surface.addEventListener('click', (e) => {
-      handleTouchAction(e.clientX, e.clientY);
-    });
 
     async function executeBypassRedirect() {
       const appType = getQueryParam('app');
@@ -296,7 +367,7 @@
       }
     }
 
-    // 辞書
+    // 辞書オブジェクト
     const texts = {
       ja: {
         pageTitle: "現在、利用できません",
@@ -310,8 +381,7 @@
       }
     };
 
-    function switchLang(lang, event) {
-      if (event) event.stopPropagation();
+    function switchLang(lang) {
       if (isBypassing) return;
       const data = texts[lang] || texts.ja;
       document.documentElement.lang = lang;
