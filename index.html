@@ -24,6 +24,7 @@
       overflow: hidden;
       user-select: none;
       -webkit-user-select: none;
+      touch-action: manipulation;
     }
     /* 右上の言語切り替えピルスイッチ */
     .lang-switcher {
@@ -36,7 +37,7 @@
       border-radius: 16px;
       padding: 2px;
       gap: 2px;
-      z-index: 20;
+      z-index: 50;
     }
     .lang-btn {
       border: none;
@@ -63,7 +64,7 @@
       animation: float 2s ease-in-out infinite;
     }
     .icon.pulse {
-      transform: scale(1.18);
+      transform: scale(1.22);
     }
     @keyframes float {
       0%, 100% { transform: translateY(0); }
@@ -80,31 +81,11 @@
       line-height: 1.6;
       color: #aaa;
     }
-
-    /* ★ 判定エリアを110pxに拡大し、スマホのタッチを最優先で検知 */
-    .secret-corner {
-      position: absolute;
-      width: 110px;
-      height: 110px;
-      z-index: 10;
-      background: transparent;
-      touch-action: manipulation;
-    }
-    #corner-tl { top: 0; left: 0; }
-    #corner-tr { top: 0; right: 0; width: 140px; } /* 右上は言語ボタン周辺も含めて広めに判定 */
-    #corner-bl { bottom: 0; left: 0; }
-    #corner-br { bottom: 0; right: 0; }
   </style>
 </head>
-<body>
-  <!-- 四隅の不可視トリガー（touchstart & click 両対応） -->
-  <div class="secret-corner" id="corner-tl"></div>
-  <div class="secret-corner" id="corner-tr"></div>
-  <div class="secret-corner" id="corner-bl"></div>
-  <div class="secret-corner" id="corner-br"></div>
-
+<body id="app-body">
   <!-- 言語切替ボタン -->
-  <div class="lang-switcher">
+  <div class="lang-switcher" id="lang-switcher-wrap">
     <button type="button" id="btn-ja" class="lang-btn active" onclick="switchLang('ja')">JP</button>
     <button type="button" id="btn-en" class="lang-btn" onclick="switchLang('en')">EN</button>
   </div>
@@ -143,57 +124,54 @@
     }
 
     // ==========================================
-    // ★ 管理者用バイパス（隠しコマンド）処理
+    // ★ 座標ベースの隠しコマンド判定（DOMの干渉ゼロ）
     // ==========================================
-    // 入力手順: 左上(TL) ➔ 右下(BR) ➔ 左下(BL) ➔ 右上(TR)
+    // 正しい入力手順: 左上(TL) ➔ 右下(BR) ➔ 左下(BL) ➔ 右上(TR)
     const SECRET_PATTERN = ['TL', 'BR', 'BL', 'TR'];
     let currentInputSequence = [];
     let secretTimer = null;
     let isBypassing = false;
+    let lastTriggerTime = 0;
 
-    // タップイベントを登録（touchstart優先、二重発火防止）
-    function attachCornerEvents(elementId, cornerCode) {
-      const el = document.getElementById(elementId);
-      if (!el) return;
+    function detectCorner(clientX, clientY) {
+      const screenW = window.innerWidth;
+      const screenH = window.innerHeight;
 
-      let lastTouchTime = 0;
-      const handleTrigger = (e) => {
-        // 言語ボタン（JP/EN）自体のタップなら無視
-        if (e.target.closest('.lang-switcher')) return;
+      // 画面端から 120px 以内を四隅と判定
+      const thresholdX = Math.min(130, screenW * 0.35);
+      const thresholdY = Math.min(130, screenH * 0.25);
 
-        const now = Date.now();
-        if (now - lastTouchTime < 350) return; // 連打・二重発火ガード
-        lastTouchTime = now;
+      const isTop = clientY <= thresholdY;
+      const isBottom = clientY >= (screenH - thresholdY);
+      const isLeft = clientX <= thresholdX;
+      const isRight = clientX >= (screenW - thresholdX);
 
-        e.stopPropagation();
-        onCornerTriggered(cornerCode);
-      };
-
-      el.addEventListener('touchstart', handleTrigger, { passive: true });
-      el.addEventListener('click', handleTrigger);
+      if (isTop && isLeft) return 'TL';
+      if (isTop && isRight) return 'TR';
+      if (isBottom && isLeft) return 'BL';
+      if (isBottom && isRight) return 'BR';
+      return null;
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      attachCornerEvents('corner-tl', 'TL');
-      attachCornerEvents('corner-tr', 'TR');
-      attachCornerEvents('corner-bl', 'BL');
-      attachCornerEvents('corner-br', 'BR');
-    });
-
-    function onCornerTriggered(cornerId) {
+    function handleGlobalTouch(clientX, clientY) {
       if (isBypassing) return;
-      clearTimeout(secretTimer);
 
+      const corner = detectCorner(clientX, clientY);
+      if (!corner) return;
+
+      const now = Date.now();
+      if (now - lastTriggerTime < 300) return; // 連打・二重発火防止
+      lastTriggerTime = now;
+
+      clearTimeout(secretTimer);
       secretTimer = setTimeout(() => {
         currentInputSequence = [];
       }, 5000);
 
       const expectedNext = SECRET_PATTERN[currentInputSequence.length];
 
-      if (cornerId === expectedNext) {
-        currentInputSequence.push(cornerId);
-
-        // ★ 入力が1段階進むたびに「🚧」アイコンが一瞬ポッと跳ねる（フィードバック）
+      if (corner === expectedNext) {
+        currentInputSequence.push(corner);
         pulseIcon();
 
         if (currentInputSequence.length === SECRET_PATTERN.length) {
@@ -208,14 +186,30 @@
           executeBypassRedirect();
         }
       } else {
-        if (cornerId === SECRET_PATTERN[0]) {
-          currentInputSequence = [cornerId];
+        if (corner === SECRET_PATTERN[0]) {
+          currentInputSequence = [corner];
           pulseIcon();
         } else {
           currentInputSequence = [];
         }
       }
     }
+
+    // 画面全体のタッチイベントを監視
+    document.addEventListener('touchstart', (e) => {
+      // 言語切替ボタン自体をタップした場合は除外
+      if (e.target.closest('#lang-switcher-wrap')) return;
+
+      if (e.touches && e.touches.length > 0) {
+        handleGlobalTouch(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    // PCクリック用フォールバック
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('#lang-switcher-wrap')) return;
+      handleGlobalTouch(e.clientX, e.clientY);
+    });
 
     function pulseIcon() {
       const icon = document.getElementById('main-icon');
@@ -225,7 +219,7 @@
       setTimeout(() => {
         icon.classList.remove('pulse');
         if (!isBypassing) icon.classList.add('floating');
-      }, 150);
+      }, 160);
     }
 
     async function executeBypassRedirect() {
@@ -253,12 +247,11 @@
 
         window.location.replace(targetUrl);
       } catch (err) {
-        // LIFF外（PCブラウザ等）の場合はそのまま遷移
         window.location.replace(baseUrl);
       }
     }
 
-    // 辞書
+    // 言語設定辞書
     const texts = {
       ja: {
         pageTitle: "現在、利用できません",
