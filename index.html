@@ -8,25 +8,37 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body {
+    html, body {
       background-color: #000000;
       color: #ffffff;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    /* 画面全体のタッチ検知専用レイヤー（最前面に近い位置） */
+    #touch-surface {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      margin: 0;
-      text-align: center;
       padding: 20px;
-      position: relative;
-      overflow: hidden;
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: manipulation;
+      text-align: center;
     }
-    /* 右上の言語切り替えピルスイッチ */
+
+    /* 右上の言語切り替えピルスイッチ（タッチレイヤーよりさらに上） */
     .lang-switcher {
       position: absolute;
       top: 16px;
@@ -37,7 +49,8 @@
       border-radius: 16px;
       padding: 2px;
       gap: 2px;
-      z-index: 50;
+      z-index: 30;
+      pointer-events: auto;
     }
     .lang-btn {
       border: none;
@@ -64,7 +77,7 @@
       animation: float 2s ease-in-out infinite;
     }
     .icon.pulse {
-      transform: scale(1.22);
+      transform: scale(1.25);
     }
     @keyframes float {
       0%, 100% { transform: translateY(0); }
@@ -81,18 +94,45 @@
       line-height: 1.6;
       color: #aaa;
     }
+
+    /* 角を正しく押した時に一瞬だけ光る極小インジケーター（目立たない白点） */
+    .tap-hint {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      z-index: 5;
+    }
+    #hint-tl { top: 12px; left: 12px; }
+    #hint-tr { top: 12px; right: 80px; }
+    #hint-bl { bottom: 12px; left: 12px; }
+    #hint-br { bottom: 12px; right: 12px; }
+    .tap-hint.show { opacity: 1; }
   </style>
 </head>
-<body id="app-body">
+<body>
+  <!-- タップ検知インジケーター（確認用） -->
+  <div class="tap-hint" id="hint-tl"></div>
+  <div class="tap-hint" id="hint-tr"></div>
+  <div class="tap-hint" id="hint-bl"></div>
+  <div class="tap-hint" id="hint-br"></div>
+
   <!-- 言語切替ボタン -->
   <div class="lang-switcher" id="lang-switcher-wrap">
-    <button type="button" id="btn-ja" class="lang-btn active" onclick="switchLang('ja')">JP</button>
-    <button type="button" id="btn-en" class="lang-btn" onclick="switchLang('en')">EN</button>
+    <button type="button" id="btn-ja" class="lang-btn active" onclick="switchLang('ja', event)">JP</button>
+    <button type="button" id="btn-en" class="lang-btn" onclick="switchLang('en', event)">EN</button>
   </div>
 
-  <div class="icon floating" id="main-icon">🚧</div>
-  <h1 id="m-title">システムメンテナンス中</h1>
-  <p id="m-desc">現在、プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
+  <!-- 全面タッチ検知サーフェス -->
+  <div id="touch-surface">
+    <div class="icon floating" id="main-icon">🚧</div>
+    <h1 id="m-title">システムメンテナンス中</h1>
+    <p id="m-desc">現在、プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
+  </div>
 
   <script>
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
@@ -124,9 +164,9 @@
     }
 
     // ==========================================
-    // ★ 座標ベースの隠しコマンド判定（DOMの干渉ゼロ）
+    // ★ 管理者用バイパス（隠しコマンド）処理
     // ==========================================
-    // 正しい入力手順: 左上(TL) ➔ 右下(BR) ➔ 左下(BL) ➔ 右上(TR)
+    // 入力手順: 左上(TL) ➔ 右下(BR) ➔ 左下(BL) ➔ 右上(TR)
     const SECRET_PATTERN = ['TL', 'BR', 'BL', 'TR'];
     let currentInputSequence = [];
     let secretTimer = null;
@@ -137,47 +177,49 @@
       const screenW = window.innerWidth;
       const screenH = window.innerHeight;
 
-      // 画面端から 120px 以内を四隅と判定
-      const thresholdX = Math.min(130, screenW * 0.35);
-      const thresholdY = Math.min(130, screenH * 0.25);
+      // 判定ゾーンを大胆に広げる（画面幅・高さの35%）
+      const boundX = screenW * 0.35;
+      const boundY = screenH * 0.30;
 
-      const isTop = clientY <= thresholdY;
-      const isBottom = clientY >= (screenH - thresholdY);
-      const isLeft = clientX <= thresholdX;
-      const isRight = clientX >= (screenW - thresholdX);
+      const isTop = clientY <= boundY;
+      const isBottom = clientY >= (screenH - boundY);
+      const isLeft = clientX <= boundX;
+      const isRight = clientX >= (screenW - boundX);
 
       if (isTop && isLeft) return 'TL';
-      if (isTop && isRight) return 'TR';
-      if (isBottom && isLeft) return 'BL';
       if (isBottom && isRight) return 'BR';
+      if (isBottom && isLeft) return 'BL';
+      // 右上判定：言語切り替えボタンの真下や左側も含め、右上の広範囲をTRとして扱う
+      if (isTop && isRight) return 'TR';
+
       return null;
     }
 
-    function handleGlobalTouch(clientX, clientY) {
+    function handleTouchAction(clientX, clientY) {
       if (isBypassing) return;
 
       const corner = detectCorner(clientX, clientY);
       if (!corner) return;
 
       const now = Date.now();
-      if (now - lastTriggerTime < 300) return; // 連打・二重発火防止
+      if (now - lastTriggerTime < 250) return;
       lastTriggerTime = now;
 
       clearTimeout(secretTimer);
       secretTimer = setTimeout(() => {
         currentInputSequence = [];
-      }, 5000);
+      }, 6000);
 
       const expectedNext = SECRET_PATTERN[currentInputSequence.length];
 
       if (corner === expectedNext) {
         currentInputSequence.push(corner);
-        pulseIcon();
+        pulseEffect(corner);
 
         if (currentInputSequence.length === SECRET_PATTERN.length) {
           isBypassing = true;
           if (navigator.vibrate) {
-            try { navigator.vibrate([40, 60, 40]); } catch (e) {}
+            try { navigator.vibrate([50, 70, 50]); } catch (e) {}
           }
           
           document.getElementById('m-title').innerText = "管理者モードで認証中...";
@@ -188,39 +230,42 @@
       } else {
         if (corner === SECRET_PATTERN[0]) {
           currentInputSequence = [corner];
-          pulseIcon();
+          pulseEffect(corner);
         } else {
           currentInputSequence = [];
         }
       }
     }
 
-    // 画面全体のタッチイベントを監視
-    document.addEventListener('touchstart', (e) => {
-      // 言語切替ボタン自体をタップした場合は除外
-      if (e.target.closest('#lang-switcher-wrap')) return;
+    function pulseEffect(cornerCode) {
+      const icon = document.getElementById('main-icon');
+      if (icon) {
+        icon.classList.remove('floating');
+        icon.classList.add('pulse');
+        setTimeout(() => {
+          icon.classList.remove('pulse');
+          if (!isBypassing) icon.classList.add('floating');
+        }, 160);
+      }
 
+      const hint = document.getElementById('hint-' + cornerCode.toLowerCase());
+      if (hint) {
+        hint.classList.add('show');
+        setTimeout(() => hint.classList.remove('show'), 300);
+      }
+    }
+
+    // タッチサーフェスにイベント登録（パッシブ解除して最速取得）
+    const surface = document.getElementById('touch-surface');
+    surface.addEventListener('touchstart', (e) => {
       if (e.touches && e.touches.length > 0) {
-        handleGlobalTouch(e.touches[0].clientX, e.touches[0].clientY);
+        handleTouchAction(e.touches[0].clientX, e.touches[0].clientY);
       }
     }, { passive: true });
 
-    // PCクリック用フォールバック
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('#lang-switcher-wrap')) return;
-      handleGlobalTouch(e.clientX, e.clientY);
+    surface.addEventListener('click', (e) => {
+      handleTouchAction(e.clientX, e.clientY);
     });
-
-    function pulseIcon() {
-      const icon = document.getElementById('main-icon');
-      if (!icon) return;
-      icon.classList.remove('floating');
-      icon.classList.add('pulse');
-      setTimeout(() => {
-        icon.classList.remove('pulse');
-        if (!isBypassing) icon.classList.add('floating');
-      }, 160);
-    }
 
     async function executeBypassRedirect() {
       const appType = getQueryParam('app');
@@ -251,7 +296,7 @@
       }
     }
 
-    // 言語設定辞書
+    // 辞書
     const texts = {
       ja: {
         pageTitle: "現在、利用できません",
@@ -265,7 +310,8 @@
       }
     };
 
-    function switchLang(lang) {
+    function switchLang(lang, event) {
+      if (event) event.stopPropagation();
       if (isBypassing) return;
       const data = texts[lang] || texts.ja;
       document.documentElement.lang = lang;
