@@ -2,12 +2,17 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>日次レポート ビューアー</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title id="page-title">日次レポート ビューアー</title>
   <!-- ★ LINE LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <!-- ★ ピンチズーム専用ライブラリ (Panzoom) -->
   <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+  <!-- ★ PDF描画エンジン (Mozilla公式 PDF.js) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
   <!-- ★ QRコード読み取り用ライブラリ (html5-qrcode) -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <!-- ★ QRコード生成用ライブラリ (qrcodejs) -->
@@ -19,12 +24,81 @@
       background-color: #000;
       color: #333;
       height: 100vh;
-      width: 100vw;
       overflow: hidden;
-      overscroll-behavior: none;
+      overscroll-behavior-y: none;
       -webkit-text-size-adjust: 100%;
     }
-    .app-root, .modal-dialog, #today-header-bar, #temp-account-banner-bar, #story-bubbles-wrapper, #chat-footer-bar, #inquiry-rooms-wrapper, #inquiry-chat-wrapper, #inquiry-footer-bar {
+
+    /* ======================================================== */
+    /* ★ メンテナンス画面用スタイル                            */
+    /* ======================================================== */
+    #maintenance-view {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100vw;
+      text-align: center;
+      padding: 20px;
+      position: fixed;
+      top: 0; left: 0;
+      background: #000;
+      color: #fff;
+      z-index: 50000;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #maintenance-view.active { display: flex; }
+    .m-lang-switcher {
+      position: absolute; top: 16px; right: 16px;
+      display: inline-flex; background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px; padding: 2px; gap: 2px; z-index: 20;
+    }
+    .m-lang-btn {
+      border: none; background: transparent; padding: 4px 10px;
+      border-radius: 14px; font-size: 11px; font-weight: 700;
+      color: #888; cursor: pointer; transition: all 0.15s ease;
+    }
+    .m-lang-btn.active { background: #333; color: #fff; }
+    .icon-wrapper { padding: 15px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+    .icon { font-size: 48px; transition: transform 0.12s ease; }
+    .icon.floating { animation: float 2s ease-in-out infinite; }
+    .icon.tapped { transform: scale(0.85); }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    .m-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; letter-spacing: 0.5px; }
+    .m-desc { font-size: 13px; line-height: 1.6; color: #aaa; }
+
+    /* 管理者バイパスモーダル */
+    .admin-modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      z-index: 50001; opacity: 0; transition: opacity 0.2s ease;
+    }
+    .admin-modal-overlay.active { display: block; opacity: 1; }
+    .admin-modal-dialog {
+      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
+      width: 85%; max-width: 320px; background: #1e1e1e; border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 18px; padding: 22px 20px; z-index: 50002; box-shadow: 0 10px 35px rgba(0,0,0,0.6);
+      text-align: center; transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .admin-modal-dialog.active { display: block; transform: translate(-50%, -50%) scale(1); }
+    .admin-pwd-input {
+      width: 100%; padding: 12px 14px; background: #2a2a2a; border: 1.5px solid #444;
+      border-radius: 10px; color: #fff; font-size: 16px; text-align: center; outline: none; margin-bottom: 6px;
+    }
+    .admin-pwd-input:focus { border-color: #8b5cf6; }
+    .modal-err-text { font-size: 12px; color: #ef4444; min-height: 18px; margin-bottom: 10px; }
+    .admin-submit-btn {
+      width: 100%; padding: 12px 0; background: #8b5cf6; border: none; border-radius: 10px;
+      color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+
+    /* ======================================================== */
+    /* ★ ビューアー本体スタイル                                 */
+    /* ======================================================== */
+    .app-root, .modal-dialog, #today-header-bar, #temp-account-banner-bar, #story-bubbles-wrapper, #chat-footer-bar, .pdf-container, #inquiry-rooms-wrapper, #inquiry-chat-wrapper, #inquiry-footer-bar {
       transition: filter 0.25s ease, -webkit-filter 0.25s ease !important;
     }
     body.confirm-open .app-root,
@@ -33,7 +107,7 @@
     body.confirm-open #temp-account-banner-bar,
     body.confirm-open #story-bubbles-wrapper,
     body.confirm-open #chat-footer-bar,
-    body.confirm-open #viewer-viewport,
+    body.confirm-open .pdf-container,
     body.confirm-open #inquiry-rooms-wrapper,
     body.confirm-open #inquiry-chat-wrapper,
     body.confirm-open #inquiry-footer-bar {
@@ -62,7 +136,7 @@
     }
     .revert-admin-btn:active { transform: scale(0.95); opacity: 0.9; }
 
-    /* メインヘッダー (完全固定) */
+    /* メインヘッダー */
     #today-header-bar {
       position: fixed; top: 0; left: 0; width: 100vw; height: 48px; background: #333; color: #fff;
       display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 10000;
@@ -178,68 +252,6 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.4);
     }
     
-    /* ======================================================== */
-    /* ★★★ 高画質レポート直接描画＆自前ズーム ビューアー ★★★ */
-    /* ======================================================== */
-    #viewer-viewport {
-      position: fixed;
-      top: 48px;
-      left: 0;
-      width: 100vw;
-      height: calc(100vh - 48px);
-      background: #000;
-      overflow: hidden;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    body.has-temp-banner #viewer-viewport { top: 78px; height: calc(100vh - 78px); }
-    body.impersonating #viewer-viewport { top: 80px; height: calc(100vh - 80px); }
-    body.impersonating.has-temp-banner #viewer-viewport { top: 110px; height: calc(100vh - 110px); }
-
-    #panzoom-container {
-      width: 100%;
-      height: 100%;
-      transform-origin: 0 0;
-      will-change: transform;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding-top: 10px;
-    }
-
-    #report-frame {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: block;
-      background: #000;
-    }
-
-    .zoom-hint-pill {
-      position: fixed;
-      bottom: 18px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(20, 20, 20, 0.88);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.18);
-      color: #e2e8f0;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 20px;
-      pointer-events: none;
-      z-index: 100;
-      transition: opacity 0.5s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    }
-    /* ======================================================== */
-
     #story-bubbles-wrapper {
       position: fixed !important; top: 48px !important; bottom: 70px !important; left: 8px !important; right: 8px !important; max-width: 100% !important;
       z-index: 9999 !important; display: none !important; flex-direction: column !important; gap: 8px !important;
@@ -484,7 +496,7 @@
       padding-right: 2px;
     }
 
-    /* ★ マイページのアバター中央配置 ＆ 右横モノクロアイコン用コンテナ */
+    /* マイページのアバター中央配置 */
     .avatar-center-container {
       position: relative;
       display: flex;
@@ -505,7 +517,7 @@
     }
     .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 
-    /* ★ モノクロ絵文字風アイコンボタン */
+    /* モノクロ絵文字風アイコンボタン */
     .avatar-side-icon-btn {
       position: absolute;
       left: calc(50% + 44px);
@@ -534,7 +546,7 @@
       background: #f1f5f9;
     }
 
-    /* ★ パステル調タブ */
+    /* パステル調タブ */
     .qr-tab-wrap { display: flex; gap: 8px; margin-bottom: 14px; }
     .qr-tab-btn {
       flex: 1; padding: 10px 0; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; border: 1.5px solid #e2e8f0; background: #f8fafc; color: #94a3b8;
@@ -560,7 +572,6 @@
     .qr-code-img-wrap img { display: block; margin: 0 auto; }
     .qr-timer-text { font-size: 11.5px; color: #64748b; text-align: center; font-weight: 600; margin-bottom: 10px; }
 
-    /* ★ 読み取り側モーダル内の大きなボタン */
     .qr-big-scan-action-btn {
       width: 100%;
       min-height: 110px;
@@ -644,7 +655,7 @@
     .badge-row { display: flex; justify-content: space-between; align-items: center; }
     .badge-val { font-weight: 700; color: #222; }
 
-    /* ★ 3言語対応：専用ポップアップ呼び出しトリガー */
+    /* 3言語対応：専用ポップアップ呼び出しトリガー */
     .lang-select-trigger {
       display: inline-flex;
       align-items: center;
@@ -660,7 +671,7 @@
     .lang-select-trigger:active { opacity: 0.6; }
     .lang-select-trigger .arrow { font-size: 14px; color: #94a3b8; }
 
-    /* ★ 言語選択モーダル */
+    /* 言語選択モーダル */
     #lang-select-dialog {
       max-width: 300px;
       padding: 18px 16px;
@@ -836,6 +847,35 @@
       fill: #fff;
     }
 
+    /* ======================================================== */
+    /* ★★★ 独自PDFキャンバス ＆ ヌルヌルピンチズームビューアー ★★★ */
+    /* ======================================================== */
+    .pdf-container {
+      position: fixed; top: 48px; left: 0; width: 100vw; height: calc(100vh - 48px);
+      overflow: hidden; background: #000; touch-action: none;
+      display: flex; align-items: center; justify-content: center;
+      user-select: none; -webkit-user-select: none;
+    }
+    body.has-temp-banner .pdf-container { top: 78px; height: calc(100vh - 78px); }
+    body.impersonating .pdf-container { top: 80px; height: calc(100vh - 80px); }
+    body.impersonating.has-temp-banner .pdf-container { top: 110px; height: calc(100vh - 110px); }
+
+    #panzoom-container {
+      width: 100%; height: 100%; transform-origin: 0 0; will-change: transform;
+      display: flex; align-items: flex-start; justify-content: center; padding-top: 10px;
+    }
+    #pdf-render-canvas {
+      background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.85); border-radius: 4px; display: block;
+    }
+
+    .zoom-hint-pill {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      background: rgba(20, 20, 20, 0.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.18); color: #e2e8f0; font-size: 11px; font-weight: 600;
+      padding: 6px 14px; border-radius: 20px; pointer-events: none; z-index: 100; transition: opacity 0.5s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    /* ======================================================== */
+
     .pending-user-card {
       background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 14px;
       padding: 14px 16px; margin-bottom: 12px; text-align: left;
@@ -868,7 +908,7 @@
     .custom-toast {
       position: fixed; top: 20px; left: 50%; transform: translate(-50%, -80px);
       background: #333333; color: #ffffff; padding: 12px 20px; border-radius: 30px; font-size: 13px; font-weight: 600;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.18); z-index: 30000; display: flex; align-items: center; gap: 8px; opacity: 0;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.18); z-index: 60000; display: flex; align-items: center; gap: 8px; opacity: 0;
       transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s; pointer-events: none; white-space: nowrap;
     }
     .custom-toast.show { transform: translate(-50%, 0); opacity: 1; }
@@ -878,6 +918,39 @@
   </style>
 </head>
 <body id="app-body">
+
+  <!-- ========================================== -->
+  <!-- ★ メンテナンス画面（9/18 22:00まで稼働）   -->
+  <!-- ========================================== -->
+  <div id="maintenance-view">
+    <div class="m-lang-switcher">
+      <button type="button" id="btn-ja" class="m-lang-btn active" onclick="switchMaintenanceLang('ja')">JP</button>
+      <button type="button" id="btn-en" class="m-lang-btn" onclick="switchMaintenanceLang('en')">EN</button>
+    </div>
+    <div class="icon-wrapper" id="secret-icon-btn">
+      <div class="icon floating" id="main-icon">🚧</div>
+    </div>
+    <h1 class="m-title" id="m-title">システムメンテナンス中</h1>
+    <p class="m-desc" id="m-desc">現在、iOS 27対応に向けた<br>プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
+  </div>
+
+  <!-- 管理者バイパス認証モーダル -->
+  <div class="admin-modal-overlay" id="admin-overlay" onclick="closeAdminModal()"></div>
+  <div class="admin-modal-dialog" id="admin-dialog">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div style="font-size:14px; font-weight:700; color:#fff;">Admin Bypass Authentication</div>
+      <button type="button" style="background:none; border:none; color:#888; font-size:18px; cursor:pointer;" onclick="closeAdminModal()">✕</button>
+    </div>
+    <form onsubmit="handleAdminSubmit(event)">
+      <input type="password" id="admin-pass-input" class="admin-pwd-input" maxlength="32" inputmode="numeric" autocomplete="off">
+      <div id="admin-err-msg" class="modal-err-text"></div>
+      <button type="submit" id="admin-btn" class="admin-submit-btn">Authenticate</button>
+    </form>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- ★ ビューアー本体画面                       -->
+  <!-- ========================================== -->
   <div id="impersonation-banner-bar">
     <div class="impersonation-notice">
       <span class="impersonation-warn-mark">⚠︎</span>
@@ -886,7 +959,7 @@
     <button type="button" class="revert-admin-btn" id="revert-admin-btn" onclick="executeRevertImpersonation()">管理者に戻る</button>
   </div>
   
-  <div id="today-loader" style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:#000; color:#fff;">
+  <div id="today-loader" style="display:none; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:#000; color:#fff; position:fixed; top:0; left:0; width:100vw; z-index:40000;">
     <div class="app-spinner"></div>
     <div class="loader-text" style="margin-top:16px;">
       <span id="loader-msg">レポートを読み込み中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
@@ -1179,12 +1252,18 @@
 
   <script>
     // ==========================================
-    // ★ 設定定数（GitHubフロントエンド用）
+    // ★ 構成設定（メンテナンス判定 & API接続）
     // ==========================================
+    // ※ 9月18日 22:00 本番公開時はここを false にするだけで即全スタッフへ開放されます
+    const IS_MAINTENANCE_MODE = true;
+
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
-    // ★ あなたが先ほどデプロイした GAS の Web API URL を指定してください
+    // ★ 先ほどデプロイした GAS の新ウェブアプリ URL（/exec）を指定してください ★
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
+
+    // バイパス暗号化ハッシュ（1126）
+    const AUTH_HASH = '5817ae4948371f9b6b7d94615c0704e6a13ba5a773938351ebd832d0fcdbdf2f';
 
     const TOKEN_KEY = 'daily_report_session_token';
     const LANG_KEY = 'daily_report_user_lang';
@@ -1428,10 +1507,10 @@
         later: '나중에',
         approveDialogTitle: '정식 등록 승인',
         impersonateDialogTitle: '대리 로그인 확인',
-        impersonateDesc: '해당 스태프의 화면으로 열람을 시작하시겠습니까?<br>상단 바에서 언제든지 관리자로 복귀할 수 있습니다.',
+        impersonateDesc: '해당 스태フ의 화면으로 열람을 시작하시겠습니까?<br>상단 바에서 언제든지 관리자로 복귀할 수 있습니다.',
         justNow: '방금 전',
         you: '나',
-        zoomHint: '두 손가락으로 확대 / 축소'
+        zoomHint: '두 손가楽으로 확대 / 축소'
       }
     };
 
@@ -1444,7 +1523,6 @@
       return text;
     }
 
-    // ★ 日付フォーマットヘルパー関数 (ja / en / ko)
     function formatReportHeaderDate(dateKey) {
       if (!dateKey || typeof dateKey !== 'string' || dateKey.length !== 8) {
         if (currentLang === 'en') return 'Daily Report';
@@ -1488,7 +1566,6 @@
         const isKo = currentLang === 'ko';
         document.documentElement.lang = currentLang;
 
-        // ヘッダータイトル日付
         const headerTitleEl = document.querySelector('#today-header-bar .header-title');
         if (headerTitleEl && currentReportDateSuffix) {
           headerTitleEl.innerText = formatReportHeaderDate(currentReportDateSuffix);
@@ -1497,7 +1574,6 @@
         const loaderMsg = document.getElementById('loader-msg');
         if (loaderMsg && loaderMsg.innerText.includes('レポート')) loaderMsg.innerText = t('loadingReport');
 
-        // マイページ内
         const mpTitle = document.getElementById('mp-title');
         if (mpTitle) mpTitle.innerText = t('myPageTitle');
         const mpNameLbl = document.getElementById('mp-lbl-name');
@@ -1656,7 +1732,7 @@
     }
     
     // ==========================================
-    // ★ 汎用 fetch API 通信ラッパー (google.script.run の代替)
+    // ★ 汎用 fetch API 通信ラッパー (google.script.run の完全代替)
     // ==========================================
     async function callGasApi(action, params = {}) {
       const postActions = [
@@ -1692,9 +1768,24 @@
     }
 
     // ==========================================
-    // ★ 初期ロード & LIFF 連携
+    // ★ 初期ロード & LIFF 連携 & メンテナンス判定
     // ==========================================
     window.onload = async function() {
+      // メンテナンスモード判定
+      if (IS_MAINTENANCE_MODE && !sessionStorage.getItem('ADMIN_BYPASS')) {
+        document.getElementById('maintenance-view').classList.add('active');
+        initMaintenanceEvents();
+        return;
+      }
+
+      await startViewerApp();
+    };
+
+    async function startViewerApp() {
+      document.getElementById('maintenance-view').classList.remove('active');
+      document.getElementById('today-loader').style.display = 'flex';
+      document.getElementById('page-title').innerText = '日次レポート ビューアー';
+
       initBirthDatePicker();
 
       // LIFFの初期化
@@ -1734,7 +1825,7 @@
           }
         }
       });
-    };
+    }
 
     function initBirthDatePicker() {
       const mSel = document.getElementById('nu-birth-month');
@@ -2011,7 +2102,7 @@
     }
 
     // ========================================================
-    // ★ ビューアー描画 & 滑らかなピンチズーム設定 (Panzoom)
+    // ★★★ 独自PDF描画 ＆ Panzoom ビューアー描画 ★★★
     // ========================================================
     function renderView(data) {
       const match = data.url ? data.url.match(/\d{8}/) : null;
@@ -2072,10 +2163,10 @@
           </button>
         </div>
 
-        <!-- ★ 自前 Panzoom キャンバス（ヘッダー完全固定） -->
-        <div id="viewer-viewport">
+        <!-- ★ 独自PDFキャンバス ＆ ヌルヌルピンチズーム -->
+        <div class="pdf-container">
           <div id="panzoom-container">
-            <iframe id="report-frame" src="${data.url}" allow="autoplay"></iframe>
+            <canvas id="pdf-render-canvas"></canvas>
           </div>
           <div class="zoom-hint-pill" id="zoom-hint-pill">
             <span id="zoom-hint-text">${t('zoomHint')}</span>
@@ -2083,19 +2174,8 @@
         </div>
       `;
 
-      // Panzoom 初期化
-      const container = document.getElementById('panzoom-container');
-      panzoomInstance = Panzoom(container, {
-        maxScale: 4.5,
-        minScale: 0.9,
-        contain: 'outside'
-      });
-      container.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
-
-      setTimeout(() => {
-        const hint = document.getElementById('zoom-hint-pill');
-        if (hint) hint.style.opacity = '0';
-      }, 3500);
+      // PDF描画
+      renderPdfToCanvas(data.url);
 
       updateImpersonationBanner();
       updateTempAccountBanner();
@@ -2104,6 +2184,132 @@
       fetchComments();
     }
 
+    async function renderPdfToCanvas(pdfUrl) {
+      try {
+        const match = pdfUrl.match(/[-\w]{25,}/);
+        if (!match) return;
+        const fileId = match[0];
+        const directPdfUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        
+        const loadingTask = pdfjsLib.getDocument(directPdfUrl);
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+
+        const viewport = page.getViewport({ scale: 2.0 });
+        const canvas = document.getElementById('pdf-render-canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        canvas.style.width = (viewport.width / 2) + 'px';
+        canvas.style.height = (viewport.height / 2) + 'px';
+
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+        const container = document.getElementById('panzoom-container');
+        if (panzoomInstance) panzoomInstance.destroy();
+        panzoomInstance = Panzoom(container, {
+          maxScale: 4.5,
+          minScale: 0.8,
+          contain: 'outside'
+        });
+        container.parentElement.addEventListener('wheel', panzoomInstance.zoomWithWheel);
+
+        setTimeout(() => {
+          const hint = document.getElementById('zoom-hint-pill');
+          if (hint) hint.style.opacity = '0';
+        }, 3500);
+      } catch (err) {
+        console.error('PDF Render error:', err);
+      }
+    }
+
+    // ========================================================
+    // ★ メンテナンス・管理者バイパスロジック (1126認証)
+    // ========================================================
+    let tapCount = 0;
+    let tapResetTimer = null;
+
+    function initMaintenanceEvents() {
+      const iconBtn = document.getElementById('secret-icon-btn');
+      const iconEl = document.getElementById('main-icon');
+
+      function handleTap(e) {
+        if (e) e.preventDefault();
+        tapCount++;
+        iconEl.classList.remove('floating');
+        iconEl.classList.add('tapped');
+        setTimeout(() => { iconEl.classList.remove('tapped'); if (tapCount === 0) iconEl.classList.add('floating'); }, 100);
+
+        clearTimeout(tapResetTimer);
+        tapResetTimer = setTimeout(() => { tapCount = 0; iconEl.classList.add('floating'); }, 2000);
+
+        if (tapCount >= 5) {
+          tapCount = 0;
+          clearTimeout(tapResetTimer);
+          openAdminModal();
+        }
+      }
+
+      iconBtn.addEventListener('touchstart', handleTap, { passive: false });
+      iconBtn.addEventListener('click', handleTap);
+    }
+
+    function openAdminModal() {
+      document.getElementById('admin-overlay').classList.add('active');
+      document.getElementById('admin-dialog').classList.add('active');
+      const input = document.getElementById('admin-pass-input');
+      input.value = '';
+      document.getElementById('admin-err-msg').innerText = '';
+      setTimeout(() => input.focus(), 150);
+    }
+
+    function closeAdminModal() {
+      document.getElementById('admin-overlay').classList.remove('active');
+      document.getElementById('admin-dialog').classList.remove('active');
+    }
+
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function handleAdminSubmit(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('admin-pass-input');
+      const err = document.getElementById('admin-err-msg');
+      const val = input.value.trim().normalize('NFKC');
+
+      const hash = await sha256(val);
+      if (hash === AUTH_HASH) {
+        closeAdminModal();
+        sessionStorage.setItem('ADMIN_BYPASS', 'true');
+        showToast('管理者認証に成功しました', 'success');
+        await startViewerApp();
+      } else {
+        err.innerText = 'Invalid passcode';
+        input.value = '';
+      }
+      return false;
+    }
+
+    function switchMaintenanceLang(lang) {
+      const btnJa = document.getElementById('btn-ja');
+      const btnEn = document.getElementById('btn-en');
+      if (lang === 'en') {
+        btnJa.classList.remove('active'); btnEn.classList.add('active');
+        document.getElementById('m-title').innerText = "Under Scheduled Maintenance";
+        document.getElementById('m-desc').innerHTML = "We are currently performing system updates.<br><br>Maintenance is scheduled to finish around<br><strong>Sep 18 at 22:00</strong>.<br><br>Thank you for your patience.";
+      } else {
+        btnJa.classList.add('active'); btnEn.classList.remove('active');
+        document.getElementById('m-title').innerText = "システムメンテナンス中";
+        document.getElementById('m-desc').innerHTML = "現在、iOS 27対応に向けた<br>プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。";
+      }
+    }
+
+    // ========================================================
+    // ★ コメント・問い合わせ・各種モーダル処理
+    // ========================================================
     function autoResizeTextarea(el) {
       el.style.height = 'auto';
       el.style.height = (el.scrollHeight) + 'px';
@@ -2930,7 +3136,7 @@
           } else {
             let failMsg = 'アカウントの切り替えに失敗しました';
             if (currentLang === 'en') failMsg = 'Failed to revert';
-            if (currentLang === 'ko') failMsg = '계정 복귀에 실패했습니다';
+            if (currentLang === 'ko') failMsg = '계정 복귀に失敗しました';
             showToast(failMsg, 'error');
           }
         }
@@ -3122,7 +3328,9 @@
       }
     }
 
-    // QRコードモーダル
+    // ==========================================
+    // ★ QRコードモーダル処理
+    // ==========================================
     function openOwnerQrModal() {
       closeModal();
       document.getElementById('modal-overlay').classList.add('active');
@@ -3517,6 +3725,90 @@
         }
       });
       return false;
+    }
+
+    // ==========================================
+    // ★ メンテナンス・管理者バイパスロジック (1126認証)
+    // ==========================================
+    let tapCount = 0;
+    let tapResetTimer = null;
+
+    function initMaintenanceEvents() {
+      const iconBtn = document.getElementById('secret-icon-btn');
+      const iconEl = document.getElementById('main-icon');
+
+      function handleTap(e) {
+        if (e) e.preventDefault();
+        tapCount++;
+        iconEl.classList.remove('floating');
+        iconEl.classList.add('tapped');
+        setTimeout(() => { iconEl.classList.remove('tapped'); if (tapCount === 0) iconEl.classList.add('floating'); }, 100);
+
+        clearTimeout(tapResetTimer);
+        tapResetTimer = setTimeout(() => { tapCount = 0; iconEl.classList.add('floating'); }, 2000);
+
+        if (tapCount >= 5) {
+          tapCount = 0;
+          clearTimeout(tapResetTimer);
+          openAdminModal();
+        }
+      }
+
+      iconBtn.addEventListener('touchstart', handleTap, { passive: false });
+      iconBtn.addEventListener('click', handleTap);
+    }
+
+    function openAdminModal() {
+      document.getElementById('admin-overlay').classList.add('active');
+      document.getElementById('admin-dialog').classList.add('active');
+      const input = document.getElementById('admin-pass-input');
+      input.value = '';
+      document.getElementById('admin-err-msg').innerText = '';
+      setTimeout(() => input.focus(), 150);
+    }
+
+    function closeAdminModal() {
+      document.getElementById('admin-overlay').classList.remove('active');
+      document.getElementById('admin-dialog').classList.remove('active');
+    }
+
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function handleAdminSubmit(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('admin-pass-input');
+      const err = document.getElementById('admin-err-msg');
+      const val = input.value.trim().normalize('NFKC');
+
+      const hash = await sha256(val);
+      if (hash === AUTH_HASH) {
+        closeAdminModal();
+        sessionStorage.setItem('ADMIN_BYPASS', 'true');
+        showToast('管理者認証に成功しました', 'success');
+        await startViewerApp();
+      } else {
+        err.innerText = 'Invalid passcode';
+        input.value = '';
+      }
+      return false;
+    }
+
+    function switchMaintenanceLang(lang) {
+      const btnJa = document.getElementById('btn-ja');
+      const btnEn = document.getElementById('btn-en');
+      if (lang === 'en') {
+        btnJa.classList.remove('active'); btnEn.classList.add('active');
+        document.getElementById('m-title').innerText = "Under Scheduled Maintenance";
+        document.getElementById('m-desc').innerHTML = "We are currently performing system updates.<br><br>Maintenance is scheduled to finish around<br><strong>Sep 18 at 22:00</strong>.<br><br>Thank you for your patience.";
+      } else {
+        btnJa.classList.add('active'); btnEn.classList.remove('active');
+        document.getElementById('m-title').innerText = "システムメンテナンス中";
+        document.getElementById('m-desc').innerHTML = "現在、iOS 27対応に向けた<br>プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。";
+      }
     }
 
     function showToast(msg, type = 'success') {
