@@ -766,42 +766,21 @@
       fill: #fff;
     }
 
-    /* ★ 独自ビューアーコンテナ (高画質原本HTML/PDF共通) */
+    /* ★ 独自ビューアーコンテナ (完全隔離・スムーズピンチズーム) */
     .viewer-container {
       position: fixed; top: 48px; left: 0; width: 100vw; height: calc(100vh - 48px);
-      overflow-y: auto; -webkit-overflow-scrolling: touch; background: #222;
-      touch-action: pan-x pan-y pinch-zoom;
+      overflow: hidden; background: #222;
     }
     body.has-temp-banner .viewer-container { top: 78px; height: calc(100vh - 78px); }
     body.impersonating .viewer-container { top: 80px; height: calc(100vh - 80px); }
     body.impersonating.has-temp-banner .viewer-container { top: 110px; height: calc(100vh - 110px); }
-    
-    /* 独自HTML展開ラッパー */
-    .custom-html-wrapper {
+
+    .custom-report-iframe {
       width: 100%;
-      min-height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      height: 100%;
+      border: none;
+      display: block;
       background: #222;
-      padding: 10px 0 30px 0;
-      box-sizing: border-box;
-    }
-    .custom-html-frame {
-      width: 100%;
-      max-width: 800px;
-      background: #fff;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-      border-radius: 4px;
-      overflow: hidden;
-      padding: 16px 12px;
-      box-sizing: border-box;
-    }
-    .custom-html-frame img {
-      max-width: 100% !important;
-      height: auto !important;
-      display: block !important;
-      margin: 0 auto 10px auto !important;
     }
 
     .pdf-fallback-frame {
@@ -1140,7 +1119,7 @@
     let isChatOpen = false;
     let currentComments = [];
     let currentReportDateSuffix = '';
-    let cachedReportHtmlContent = ''; // ★ 高画質原本HTMLキャッシュ保存用
+    let cachedReportHtmlContent = '';
     let activeReactionMenuRow = null;
     let isInquiryOpen = false;
     let currentInquiryTargetUserId = '';
@@ -1935,15 +1914,15 @@
       const headerFormattedDate = formatReportHeaderDate(currentReportDateSuffix);
       const viewerUrl = (data && data.url) ? data.url : '';
 
-      // ★ 独自HTMLキャッシュがある場合はインライン展開、無ければPDFフォールバック
+      // ★ 独自ビューアー：キャッシュされた原本HTMLがある場合はiframeのsrcdocで完全インライン展開
       let viewerContentHtml = '';
       if (cachedReportHtmlContent && cachedReportHtmlContent.trim().length > 0) {
+        const sanitizedHtml = cachedReportHtmlContent
+          .replace(/"/g, '&quot;')
+          .replace(/<style>/i, '<style>html,body{background:#222;display:flex;flex-direction:column;align-items:center;padding:10px 0;margin:0;box-sizing:border-box;}body>div.title,body>div.grid-container,body>div.img-wrap{background:#fff;box-shadow:0 4px 15px rgba(0,0,0,0.5);border-radius:4px;padding:15px;box-sizing:border-box;}');
+
         viewerContentHtml = `
-          <div class="custom-html-wrapper">
-            <div class="custom-html-frame">
-              ${cachedReportHtmlContent}
-            </div>
-          </div>
+          <iframe class="custom-report-iframe" srcdoc="${sanitizedHtml}" allow="autoplay"></iframe>
         `;
       } else {
         viewerContentHtml = `
@@ -2298,7 +2277,7 @@
           }
           let errToast = '投稿に失敗しました';
           if (currentLang === 'en') errToast = 'Failed to post comment';
-          if (currentLang === 'ko') errToast = '등록に失敗しました';
+          if (currentLang === 'ko') errToast = '등록에 실패했습니다';
           showToast(res.message || errToast, 'error');
         }
       });
@@ -2902,7 +2881,7 @@
           }
           let failMsg = '送信に失敗しました';
           if (currentLang === 'en') failMsg = 'Failed to send message';
-          if (currentLang === 'ko') failMsg = '메시지 전송에 실패했습니다';
+          if (currentLang === 'ko') failMsg = '메시지 전송に失敗しました';
           showToast(res.message || failMsg, 'error');
         }
       });
