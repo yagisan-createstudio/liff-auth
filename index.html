@@ -2,3428 +2,412 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <title>日次レポート ビューアー</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title id="page-title">現在、利用できません</title>
   <!-- ★ LINE LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- ★ QRコード読み取り用ライブラリ (html5-qrcode) -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <!-- ★ QRコード生成用ライブラリ (qrcodejs) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; -webkit-tap-highlight-color: transparent; }
-    
-    html, body {
-      background-color: #000;
-      color: #333;
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: #000000;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       height: 100vh;
+      margin: 0;
+      text-align: center;
+      padding: 20px;
+      position: relative;
       overflow: hidden;
-      overscroll-behavior-y: none;
-      -webkit-text-size-adjust: 100%;
+      user-select: none;
+      -webkit-user-select: none;
     }
-    .app-root, .modal-dialog, #today-header-bar, #temp-account-banner-bar, #story-bubbles-wrapper, #chat-footer-bar, .viewer-container, #inquiry-rooms-wrapper, #inquiry-chat-wrapper, #inquiry-footer-bar {
-      transition: filter 0.25s ease, -webkit-filter 0.25s ease !important;
-    }
-    body.confirm-open .app-root,
-    body.confirm-open .modal-dialog,
-    body.confirm-open #today-header-bar,
-    body.confirm-open #temp-account-banner-bar,
-    body.confirm-open #story-bubbles-wrapper,
-    body.confirm-open #chat-footer-bar,
-    body.confirm-open .viewer-container,
-    body.confirm-open #inquiry-rooms-wrapper,
-    body.confirm-open #inquiry-chat-wrapper,
-    body.confirm-open #inquiry-footer-bar {
-      filter: grayscale(100%) brightness(0.85) !important;
-      -webkit-filter: grayscale(100%) brightness(0.85) !important;
-      pointer-events: none !important;
-    }
-    body.confirm-open .confirm-dialog {
-      filter: none !important;
-      -webkit-filter: none !important;
-    }
-
-    /* 成り代わり通知バナー (最上部固定) */
-    #impersonation-banner-bar {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 32px;
-      background: #1e1e1e; border-bottom: 1.5px solid #fbc02d; color: #fff;
-      display: none; align-items: center; justify-content: space-between;
-      padding: 0 12px; z-index: 10001; font-size: 11.5px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    }
-    #impersonation-banner-bar.active { display: flex; }
-    .impersonation-notice { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #fffde7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
-    .impersonation-warn-mark { color: #fbc02d; font-size: 13px; font-weight: 700; }
-    .revert-admin-btn {
-      background: #fbc02d; color: #111; border: none; border-radius: 4px;
-      padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
-      transition: background 0.15s, transform 0.15s;
-    }
-    .revert-admin-btn:active { transform: scale(0.95); opacity: 0.9; }
-
-    /* メインヘッダー */
-    #today-header-bar {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 48px; background: #333; color: #fff;
-      display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 10000;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2); transition: top 0.2s ease;
-    }
-    body.impersonating #today-header-bar { top: 32px; }
-
-    /* ヘッダー直下の仮アカウントバナー */
-    #temp-account-banner-bar {
-      position: fixed; top: 48px; left: 0; width: 100vw; height: 30px;
-      background: #8b5cf6; border-bottom: 1px solid #7c3aed; color: #ffffff;
-      display: none; align-items: center; justify-content: center; gap: 6px;
-      padding: 0 12px; z-index: 9999; font-size: 12px; font-weight: 700;
-      letter-spacing: 0.3px;
-      box-shadow: 0 3px 10px rgba(139, 92, 246, 0.35); transition: top 0.2s ease;
-    }
-    body.impersonating #temp-account-banner-bar { top: 80px; }
-    #temp-account-banner-bar.active { display: flex; }
-
-    .header-title { font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42%; }
-    .header-right { display: flex; align-items: center; gap: 8px; }
-    
-    .header-icon-btn {
-      position: relative; background: #444; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px;
-      width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer;
-      transition: background 0.2s;
-    }
-    .chat-toggle-btn.active { background: #ffb7c5; }
-    .chat-toggle-btn.active svg { fill: #111; }
-    
-    .inquiry-toggle-btn.active { background: #b3e5fc; }
-    .inquiry-toggle-btn.active svg { fill: #111; }
-    .header-icon-btn svg { width: 16px; height: 16px; fill: #fff; }
-    
-    .chat-icon-open, .chat-icon-close { display: none; }
-    .chat-toggle-btn:not(.active) .chat-icon-open { display: block; }
-    .chat-toggle-btn.active .chat-icon-close { display: block; }
-    .inquiry-icon-open, .inquiry-icon-close { display: none; }
-    .inquiry-toggle-btn:not(.active) .inquiry-icon-open { display: block; }
-    .inquiry-toggle-btn.active .inquiry-icon-close { display: block; }
-    .chat-badge {
-      position: absolute; top: -4px; right: -4px; background: #ff3b30; color: #fff; font-size: 10px; font-weight: 700;
-      padding: 1px 5px; border-radius: 10px; min-width: 16px; text-align: center; display: none; z-index: 10;
-    }
-
-    .inquiry-bubble-tip {
+    /* 右上の言語切り替えピルスイッチ */
+    .lang-switcher {
       position: absolute;
-      top: 42px;
-      right: -8px;
-      background: rgba(30, 30, 30, 0.96);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      color: #fff;
-      border: 1.5px solid #b3e5fc;
-      border-radius: 12px;
-      padding: 7px 11px;
+      top: 16px;
+      right: 16px;
+      display: inline-flex;
+      background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 2px;
+      gap: 2px;
+      z-index: 20;
+    }
+    .lang-btn {
+      border: none;
+      background: transparent;
+      padding: 4px 10px;
+      border-radius: 14px;
       font-size: 11px;
       font-weight: 700;
-      white-space: nowrap;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-      display: none;
-      align-items: center;
-      gap: 5px;
-      cursor: pointer;
-      z-index: 10002;
-      animation: tipBounceIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      pointer-events: auto;
-    }
-    .inquiry-bubble-tip::before {
-      content: "";
-      position: absolute;
-      top: -6px;
-      right: 16px;
-      border-left: 6px solid transparent;
-      border-right: 6px solid transparent;
-      border-bottom: 6px solid #b3e5fc;
-    }
-    .inquiry-bubble-tip::after {
-      content: "";
-      position: absolute;
-      top: -4px;
-      right: 16px;
-      border-left: 6px solid transparent;
-      border-right: 6px solid transparent;
-      border-bottom: 6px solid #1e1e1e;
-    }
-    @keyframes tipBounceIn {
-      0% { opacity: 0; transform: translateY(-4px) scale(0.92); }
-      100% { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    .login-btn-wrap {
-      position: relative;
-      display: inline-flex;
-    }
-    .login-btn { 
-      background: #555; color: #fff; border: 1px solid rgba(255,255,255,0.2); 
-      border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 700; 
-      cursor: pointer; display: flex; align-items: center; gap: 6px; 
-      transition: background 0.2s, color 0.2s;
-    }
-    .login-btn.guest-mode {
-      background: #fff3a8 !important;
-      color: #333333 !important;
-      border: 1px solid #f9ca24 !important;
-      box-shadow: 0 2px 6px rgba(249, 202, 36, 0.3) !important;
-    }
-    .header-avatar { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; display: none; border: 1px solid #ddd; }
-    
-    .approval-header-badge {
-      position: absolute; top: -4px; right: -4px; background: #8b5cf6; color: #fff; font-size: 10px; font-weight: 700;
-      padding: 1px 5px; border-radius: 10px; min-width: 16px; text-align: center; display: none; z-index: 10;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-    }
-    
-    #story-bubbles-wrapper {
-      position: fixed !important; top: 48px !important; bottom: 70px !important; left: 8px !important; right: 8px !important; max-width: 100% !important;
-      z-index: 9999 !important; display: none !important; flex-direction: column !important; gap: 8px !important;
-      overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 4px 2px 10px 2px !important;
-      pointer-events: auto; scrollbar-width: none; -ms-overflow-style: none;
-    }
-    body.has-temp-banner #story-bubbles-wrapper { top: 78px !important; }
-    body.impersonating #story-bubbles-wrapper { top: 80px !important; }
-    body.impersonating.has-temp-banner #story-bubbles-wrapper { top: 110px !important; }
-    #story-bubbles-wrapper::-webkit-scrollbar { display: none !important; }
-    #story-bubbles-wrapper.active { display: flex !important; }
-
-    .chat-input::-webkit-scrollbar { width: 3px; }
-    .chat-input::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.2); border-radius: 3px; }
-    .story-bubble-card {
-      background: rgba(255, 255, 255, 0.95) !important; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border-radius: 18px !important; padding: 12px 14px !important; box-shadow: 0 8px 32px rgba(0,0,0,0.28) !important;
-      border: 1.5px solid rgba(255, 255, 255, 0.7) !important; pointer-events: auto;
-      display: flex; flex-direction: column; gap: 6px; position: relative; flex-shrink: 0;
-      max-width: 85% !important; align-self: flex-start; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; z-index: 1;
-    }
-    .story-bubble-card.my-comment {
-      align-self: flex-end !important;
-      background: rgba(250, 235, 246, 0.95) !important;
-      border: 1.5px solid rgba(255, 255, 255, 0.9) !important;
-    }
-    .story-bubble-card.my-inquiry-msg {
-      align-self: flex-end !important;
-      background: rgba(225, 245, 254, 0.95) !important;
-      border: 1.5px solid rgba(255, 255, 255, 0.9) !important;
-    }
-    #story-bubbles-wrapper.reaction-mode::before {
-      content: ""; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0, 0, 0, 0.5); z-index: 5; animation: fadeIn 0.2s forwards;
-    }
-    #story-bubbles-wrapper.reaction-mode .story-bubble-card {
-      opacity: 0.4; filter: grayscale(40%); pointer-events: none; transition: all 0.2s ease;
-    }
-    #story-bubbles-wrapper.reaction-mode .story-bubble-card.reaction-target {
-      opacity: 1; filter: none; z-index: 10; pointer-events: auto;
-      transform: scale(1.02); box-shadow: 0 12px 35px rgba(0,0,0,0.4) !important;
-      border-color: #ffb7c5 !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .comment-header-row { display: flex; align-items: center; gap: 8px; }
-    .comment-avatar { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0; pointer-events: none; }
-    .comment-author { font-size: 12px; font-weight: 700; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .comment-content { font-size: 13px; color: #222; word-break: break-all; line-height: 1.4; padding-left: 2px; white-space: pre-wrap; }
-    .comment-link { color: #0288d1; text-decoration: underline; word-break: break-all; cursor: pointer; }
-    .comment-link:active { color: #01579b; }
-    .reactions-display-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-    .reaction-badge {
-      background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(0,0,0,0.1); border-radius: 12px;
-      padding: 2px 6px; font-size: 11px; display: inline-flex; align-items: center; gap: 3px; cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: background 0.15s;
-    }
-    .reaction-badge.reacted { background: #ffe6ef; border-color: #ffb7c5; font-weight: 700; }
-    .reaction-popup-menu {
-      position: fixed; background: rgba(30, 30, 30, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border-radius: 30px; padding: 6px 14px; display: flex; gap: 10px; z-index: 30005 !important;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.4); animation: popDownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-    @keyframes popDownFadeIn {
-      0% { opacity: 0; transform: translateY(-6px) scale(0.9); }
-      100% { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    .reaction-popup-item { font-size: 20px; cursor: pointer; padding: 2px; transition: transform 0.15s; }
-    .reaction-popup-item:active { transform: scale(1.3); }
-    #chat-footer-bar {
-      position: fixed !important; bottom: 0 !important; left: 0 !important; width: 100vw !important; background: rgba(51, 51, 51, 0.95) !important;
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid #444 !important;
-      padding: 10px 16px !important; z-index: 9999 !important; display: none !important; align-items: flex-end !important; gap: 10px !important;
-    }
-    #chat-footer-bar.active { display: flex !important; }
-    .chat-input-wrapper {
-      flex: 1; display: flex; align-items: center; background: #fff; border: 1.5px solid #ccc;
-      border-radius: 20px; padding: 8px 6px 8px 14px; max-height: 140px; min-height: 42px;
-    }
-    .chat-input {
-      flex: 1; border: none; outline: none; background: transparent; color: #222; font-size: 16px;
-      resize: none; line-height: 1.4; max-height: 124px; min-height: 24px; overflow-y: auto; padding: 0; margin: 0;
-    }
-    .chat-input::placeholder { color: #888; }
-    .send-btn {
-      background: #ffb7c5; border: none; border-radius: 50%; width: 38px; height: 38px;
-      display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
-      box-shadow: 0 3px 10px rgba(255, 183, 197, 0.4); margin-bottom: 2px; transition: background 0.2s ease, opacity 0.2s ease;
-    }
-    .send-btn svg { width: 18px; height: 18px; fill: #111111; transform: translateX(1px); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-    
-    .inquiry-send-btn {
-      background: #b3e5fc !important; box-shadow: 0 3px 10px rgba(179, 229, 252, 0.4) !important;
-    }
-    .send-btn.sending svg { transform: rotate(360deg) scale(0.85); }
-    .send-btn.success { background: #34c759 !important; }
-    .send-btn.success svg { fill: #fff !important; transform: scale(1.1); }
-    .send-btn:active:not(.sending):not(.success) { transform: scale(0.88); }
-    .send-btn:disabled { background: #666; cursor: not-allowed; box-shadow: none; }
-    .send-btn:disabled svg { fill: #bbb; }
-    
-    #inquiry-rooms-wrapper {
-      position: fixed !important; top: 48px !important; bottom: 0 !important; left: 0 !important; width: 100vw !important;
-      background: #181818 !important; z-index: 9999 !important; display: none !important; flex-direction: column !important;
-      overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 12px 14px !important; gap: 8px !important;
-    }
-    body.has-temp-banner #inquiry-rooms-wrapper { top: 78px !important; }
-    body.impersonating #inquiry-rooms-wrapper { top: 80px !important; }
-    body.impersonating.has-temp-banner #inquiry-rooms-wrapper { top: 110px !important; }
-    #inquiry-rooms-wrapper.active { display: flex !important; }
-    
-    .inquiry-room-card {
-      background: rgba(40, 40, 40, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.3); transition: transform 0.15s, background 0.15s; position: relative;
-    }
-    .inquiry-room-card:active { transform: scale(0.98); background: #333; }
-
-    .inquiry-room-avatar-wrap {
-      position: relative;
-      width: 44px;
-      height: 44px;
-      flex-shrink: 0;
-    }
-    .inquiry-room-avatar {
-      width: 44px; height: 44px; border-radius: 50%; object-fit: cover;
-      border: 1.5px solid #555; display: block; background: #333;
-    }
-
-    .inquiry-room-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-    .inquiry-room-name { font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .inquiry-room-lastmsg { font-size: 12px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 16px; }
-    .inquiry-room-badge { background: #ff3b30; color: #fff; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 12px; flex-shrink: 0; }
-    
-    #inquiry-chat-wrapper {
-      position: fixed !important; top: 48px !important; bottom: 70px !important; left: 8px !important; right: 8px !important; max-width: 100% !important;
-      z-index: 9999 !important; display: none !important; flex-direction: column !important; gap: 8px !important;
-      overflow-y: auto !important; -webkit-overflow-scrolling: touch !important; padding: 4px 2px 10px 2px !important;
-      pointer-events: auto; scrollbar-width: none; -ms-overflow-style: none;
-    }
-    body.has-temp-banner #inquiry-chat-wrapper { top: 78px !important; }
-    body.impersonating #inquiry-chat-wrapper { top: 80px !important; }
-    body.impersonating.has-temp-banner #inquiry-chat-wrapper { top: 110px !important; }
-    #inquiry-chat-wrapper::-webkit-scrollbar { display: none !important; }
-    #inquiry-chat-wrapper.active { display: flex !important; }
-
-    .inquiry-partner-banner {
-      background: rgba(35, 35, 35, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;
-      color: #fff; margin-bottom: 4px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.12);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    }
-    .inquiry-partner-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
-    .inquiry-partner-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1.5px solid #fff; flex-shrink: 0; background: #555; }
-    .inquiry-partner-name { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
-    
-    .inquiry-partner-right { display: flex; align-items: center; gap: 6px; }
-    
-    .inquiry-impersonate-btn {
-      background: #fbc02d; border: none; color: #111; border-radius: 6px;
-      padding: 5px 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
-      display: flex; align-items: center; gap: 3px;
-    }
-    .inquiry-impersonate-btn:active { background: #f9a825; }
-    .inquiry-back-btn {
-      background: #555; border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 6px;
-      padding: 5px 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
-    }
-    .inquiry-back-btn:active { background: #666; }
-    #inquiry-footer-bar {
-      position: fixed !important; bottom: 0 !important; left: 0 !important; width: 100vw !important; background: rgba(51, 51, 51, 0.95) !important;
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid #444 !important;
-      padding: 10px 16px !important; z-index: 9999 !important; display: none !important; align-items: flex-end !important; gap: 10px !important;
-    }
-    #inquiry-footer-bar.active { display: flex !important; }
-    .loader-text { font-size: 13px; font-weight: 600; color: #aaa; letter-spacing: 0.3px; display: flex; align-items: center; justify-content: center; }
-    .dots-bounce { display: inline-flex; margin-left: 2px; gap: 1.5px; }
-    .dots-bounce span { display: inline-block; animation: dotBounce 1.4s infinite ease-in-out both; font-size: 14px; line-height: 1; color: inherit; }
-    .dots-bounce span:nth-child(1) { animation-delay: -0.32s; }
-    .dots-bounce span:nth-child(2) { animation-delay: -0.16s; }
-    .dots-bounce span:nth-child(3) { animation-delay: 0s; }
-    @keyframes dotBounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-4px); } }
-    .modal-overlay {
-      display: none !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0, 0, 0, 0.6); z-index: 20000; opacity: 0; transition: opacity 0.25s ease;
-    }
-    .modal-overlay.active { display: block !important; opacity: 1; }
-    .chat-bg-overlay {
-      position: fixed; top: 48px; left: 0; width: 100vw; height: calc(100vh - 48px);
-      background: rgba(0, 0, 0, 0.75); backdrop-filter: grayscale(80%) blur(4px); -webkit-backdrop-filter: grayscale(80%) blur(4px);
-      z-index: 9998; display: none; opacity: 0; transition: opacity 0.25s ease; pointer-events: none;
-    }
-    body.has-temp-banner .chat-bg-overlay { top: 78px; height: calc(100vh - 78px); }
-    body.impersonating .chat-bg-overlay { top: 80px; height: calc(100vh - 80px); }
-    body.impersonating.has-temp-banner .chat-bg-overlay { top: 110px; height: calc(100vh - 110px); }
-    .chat-bg-overlay.active { display: block; opacity: 1; }
-    .modal-dialog {
-      display: none !important; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
-      width: 90%; max-width: 400px; background: #fff; border-radius: 20px; padding: 24px 20px;
-      z-index: 20001; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: transform 0.2s ease;
-    }
-    .modal-dialog.active { display: block !important; transform: translate(-50%, -50%) scale(1); }
-
-    /* 承認待ちモーダル専用スタイル */
-    #approval-list-dialog {
-      height: 80vh !important;
-      max-height: 540px !important;
-      display: none !important;
-      flex-direction: column !important;
-      padding: 20px 18px 16px 18px !important;
-      box-sizing: border-box !important;
-    }
-    #approval-list-dialog.active {
-      display: flex !important;
-    }
-    .approval-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-bottom: 12px;
-      margin-bottom: 10px;
-      border-bottom: 1px solid #f1f5f9;
-      flex-shrink: 0;
-    }
-    .approval-modal-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #1e293b;
-    }
-    .approval-modal-close {
-      background: none;
-      border: none;
-      font-size: 18px;
-      color: #94a3b8;
-      cursor: pointer;
-      padding: 4px;
-      line-height: 1;
-    }
-    #approval-list-content {
-      overflow-y: auto !important;
-      flex: 1 1 auto !important;
-      -webkit-overflow-scrolling: touch !important;
-      padding-right: 2px;
-    }
-
-    .avatar-center-container {
-      position: relative;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin: 0 auto;
-    }
-    .avatar-preview-wrap {
-      width: 72px;
-      height: 72px;
-      border-radius: 50%;
-      overflow: hidden;
-      background: #e2e8f0;
-      border: 2px solid #cbd5e1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .avatar-img { width: 100%; height: 100%; object-fit: cover; }
-
-    .avatar-side-icon-btn {
-      position: absolute;
-      left: calc(50% + 44px);
-      top: 50%;
-      transform: translateY(-50%);
-      width: 32px;
-      height: 32px;
-      background: #ffffff;
-      border: 1.5px solid #222222;
-      border-radius: 50%;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-      transition: transform 0.15s, background 0.15s;
-      padding: 0;
-    }
-    .avatar-side-icon-btn svg {
-      width: 17px;
-      height: 17px;
-      fill: #111111;
-    }
-    .avatar-side-icon-btn:active {
-      transform: translateY(-50%) scale(0.92);
-      background: #f1f5f9;
-    }
-
-    .qr-tab-wrap { display: flex; gap: 8px; margin-bottom: 14px; }
-    .qr-tab-btn {
-      flex: 1; padding: 10px 0; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; border: 1.5px solid #e2e8f0; background: #f8fafc; color: #94a3b8;
-    }
-    .qr-tab-btn.admin {
-      background: #fdf2f4; color: #64748b; border-color: #f1f5f9;
-    }
-    .qr-tab-btn.admin.active {
-      background: #ffb7c5; border-color: #ff9fb1; color: #111111; box-shadow: 0 2px 8px rgba(255, 183, 197, 0.4);
-    }
-    .qr-tab-btn.user {
-      background: #f0fdf4; color: #64748b; border-color: #f1f5f9;
-    }
-    .qr-tab-btn.user.active {
-      background: #b3e5fc; border-color: #81d4fa; color: #111111; box-shadow: 0 2px 8px rgba(179, 229, 252, 0.4);
-    }
-
-    .qr-code-img-wrap {
-      width: 200px; height: 200px; margin: 0 auto 12px auto; background: #fff;
-      display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    }
-    .qr-code-img-wrap img { display: block; margin: 0 auto; }
-    .qr-timer-text { font-size: 11.5px; color: #64748b; text-align: center; font-weight: 600; margin-bottom: 10px; }
-
-    .qr-big-scan-action-btn {
-      width: 100%;
-      min-height: 110px;
-      background: #f8fafc;
-      border: 2px dashed #cbd5e1;
-      border-radius: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s, transform 0.15s;
-      padding: 16px;
-      margin-top: 4px;
-    }
-    .qr-big-scan-action-btn:active {
-      background: #f1f5f9;
-      border-color: #94a3b8;
-      transform: scale(0.98);
-    }
-    .qr-big-scan-action-btn svg {
-      width: 40px;
-      height: 40px;
-      fill: #111111;
-    }
-    .qr-big-scan-label {
-      font-size: 13.5px;
-      font-weight: 700;
-      color: #1e293b;
-    }
-
-    .confirm-overlay { z-index: 20003 !important; background: rgba(0, 0, 0, 0.4) !important; }
-    .confirm-dialog {
-      display: none !important; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
-      background: #ffffff; width: 85%; max-width: 320px; border-radius: 18px; padding: 22px 18px;
-      z-index: 20004 !important; box-shadow: 0 10px 35px rgba(0,0,0,0.3); text-align: center;
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .confirm-dialog.active { display: block !important; transform: translate(-50%, -50%) scale(1); }
-    .confirm-title { font-size: 15px; font-weight: 700; color: #222; margin-bottom: 8px; }
-    .confirm-desc { font-size: 12px; color: #666; line-height: 1.5; margin-bottom: 16px; }
-    .confirm-actions { display: flex; gap: 10px; }
-    .confirm-btn { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; }
-    .confirm-cancel { background: #f0f2f5; color: #555; }
-    .confirm-ok { background: #e53935; color: #ffffff; }
-    .confirm-open-btn { background: #0288d1; color: #ffffff; }
-    .confirm-impersonate-btn { background: #fbc02d; color: #111111; }
-    .confirm-approve-btn { background: #8b5cf6; color: #ffffff; }
-    .form-group { text-align: left; margin-bottom: 14px; }
-    .form-label { font-size: 12px; font-weight: 700; color: #555; margin-bottom: 6px; display: block; }
-    
-    .password-input-wrapper { position: relative; width: 100%; display: flex; align-items: center; }
-    .form-input { width: 100%; padding: 12px 14px; border: 1.5px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; background: #fff; color: #222; box-sizing: border-box; }
-    .password-input-wrapper .form-input { padding-right: 44px; }
-    .pwd-toggle-btn {
-      position: absolute; right: 4px; width: 38px; height: 38px; background: none; border: none;
-      cursor: pointer; display: flex; align-items: center; justify-content: center; color: #777;
-      padding: 0; border-radius: 50%; transition: color 0.15s;
-    }
-    .pwd-toggle-btn:active { color: #111; }
-    .pwd-icon { width: 20px; height: 20px; fill: currentColor; }
-    .submit-btn { width: 100%; padding: 13px 0; background: #333; color: #fff; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 2px; }
-    .submit-btn:disabled { background: #888; cursor: not-allowed; }
-    .form-err { color: #e53935; font-size: 12.5px; margin: 10px 0; text-align: center; min-height: 18px; }
-    
-    .mp-temp-pill-badge {
-      display: inline-block;
-      margin: 8px auto 14px auto;
-      padding: 4px 12px;
-      background: #f3e8ff;
-      border: 1px solid #ddd6fe;
-      border-radius: 20px;
-      color: #6b21a8;
-      font-size: 11.5px;
-      font-weight: 700;
-      letter-spacing: 0.3px;
-    }
-
-    .badge-card { background: #f8f9fa; border: 1px solid #edf0f2; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #444; line-height: 1.6; }
-    .badge-row { display: flex; justify-content: space-between; align-items: center; }
-    .badge-val { font-weight: 700; color: #222; }
-
-    .lang-select-trigger {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: none;
-      border: none;
-      font-size: 13px;
-      font-weight: 700;
-      color: #0f172a;
-      cursor: pointer;
-      padding: 2px 4px;
-    }
-    .lang-select-trigger:active { opacity: 0.6; }
-    .lang-select-trigger .arrow { font-size: 14px; color: #94a3b8; }
-
-    #lang-select-dialog {
-      max-width: 300px;
-      padding: 18px 16px;
-      text-align: left;
-    }
-    .lang-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 12px;
-    }
-    .lang-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1.5px solid #e2e8f0;
-      background: #f8fafc;
-      font-size: 14px;
-      font-weight: 600;
-      color: #334155;
+      color: #888888;
       cursor: pointer;
       transition: all 0.15s ease;
     }
-    .lang-item:active { transform: scale(0.98); }
-    .lang-item.selected {
-      border-color: #3b82f6;
-      background: #eff6ff;
-      color: #1d4ed8;
-      font-weight: 700;
+    .lang-btn.active {
+      background: #333333;
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
-    .lang-item .check {
-      font-size: 16px;
-      color: #3b82f6;
-      display: none;
-    }
-    .lang-item.selected .check {
-      display: inline-block;
-    }
-
-    .status-dot-text {
-      font-size: 12.5px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .status-dot-text.linked {
-      color: #111111;
-      font-weight: 700;
-    }
-    .status-dot-text.unlinked {
-      color: #777777;
-      font-weight: 600;
-    }
-    .status-dot {
-      width: 7.5px;
-      height: 7.5px;
-      border-radius: 50%;
-      display: inline-block;
-      flex-shrink: 0;
-    }
-    .status-dot.green {
-      background-color: #34c759;
-      box-shadow: 0 0 0 1.5px rgba(52, 199, 89, 0.2);
-    }
-    .status-dot.gray {
-      background-color: #b0b0b0;
-    }
-
-    .archive-btn {
-      display: block; width: 100%; padding: 12px 0; background: #ffb7c5; color: #111111;
-      text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 13.5px;
-      text-align: center; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(255, 183, 197, 0.4);
-      transition: background 0.2s; border: none; cursor: pointer;
-    }
-    .archive-btn:active { opacity: 0.85; transform: scale(0.98); }
-    .archive-btn:disabled { background: #ffcbd4; cursor: not-allowed; }
-    
-    .approval-btn {
-      display: none; width: 100%; padding: 12px 0; background: #e9d5ff; color: #111111;
-      border: none; border-radius: 10px; font-weight: 700; font-size: 13.5px;
-      text-align: center; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(233, 213, 255, 0.45);
-      cursor: pointer; transition: opacity 0.2s, transform 0.15s;
-    }
-    .approval-btn:active { opacity: 0.85; transform: scale(0.98); }
-
-    .logout-link { display: inline-block; font-size: 12px; color: #e53935; text-decoration: underline; cursor: pointer; background: none; border: none; font-weight: 700; }
-    
-    .switch-auth-mode-btn {
-      background: none; border: none; font-size: 12.5px; color: #7c3aed; font-weight: 700;
-      cursor: pointer; text-decoration: underline; display: inline-block; margin-top: 14px;
-    }
-    .switch-auth-mode-btn:active { color: #5b21b6; }
-
-    .emp-id-input-wrap {
-      display: flex;
-      align-items: center;
-      border: 1.5px solid #ddd;
-      border-radius: 10px;
-      overflow: hidden;
-      background: #fff;
-    }
-    .emp-id-prefix {
-      background: #f1f5f9;
-      padding: 12px 14px;
-      font-size: 16px;
-      font-weight: 700;
-      color: #334155;
-      border-right: 1.5px solid #cbd5e1;
-      user-select: none;
-    }
-    .emp-id-input {
-      flex: 1;
-      border: none;
-      padding: 12px 14px;
-      font-size: 16px;
-      outline: none;
-      color: #222;
-    }
-
-    .wheel-picker-wrap {
-      display: flex;
-      gap: 10px;
-      width: 100%;
-    }
-    .wheel-select-col {
-      flex: 1;
-      position: relative;
-    }
-    .wheel-select {
-      width: 100%;
-      padding: 12px 30px 12px 14px;
-      border: 1.5px solid #ddd;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 600;
-      background: #fff;
-      color: #222;
-      outline: none;
-      -webkit-appearance: none;
-      appearance: none;
+    /* ★ アイコン（5回タップ領域） */
+    .icon-wrapper {
+      padding: 15px;
       cursor: pointer;
-    }
-    .wheel-select:focus {
-      border-color: #7c3aed;
-    }
-    .wheel-arrow {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      pointer-events: none;
-      width: 10px;
-      height: 10px;
-      fill: #64748b;
-    }
-
-    .inline-mail-icon {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      vertical-align: -2px;
-      width: 17px;
-      height: 17px;
-      background: #333;
-      border-radius: 4px;
-      margin: 0 2px;
+      border-radius: 50%;
     }
-    .inline-mail-icon svg {
-      width: 11px;
-      height: 11px;
-      fill: #fff;
+    .icon {
+      font-size: 48px;
+      transition: transform 0.12s ease;
+    }
+    .icon.floating {
+      animation: float 2s ease-in-out infinite;
+    }
+    .icon.tapped {
+      transform: scale(0.85);
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    h1 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+    p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #aaa;
     }
 
-    /* ★ 独自ビューアーコンテナ (完全隔離・スムーズピンチズーム) */
-    .viewer-container {
-      position: fixed; top: 48px; left: 0; width: 100vw; height: calc(100vh - 48px);
-      overflow: hidden; background: #222;
+    /* 管理者認証モーダル */
+    .admin-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.2s ease;
     }
-    body.has-temp-banner .viewer-container { top: 78px; height: calc(100vh - 78px); }
-    body.impersonating .viewer-container { top: 80px; height: calc(100vh - 80px); }
-    body.impersonating.has-temp-banner .viewer-container { top: 110px; height: calc(100vh - 110px); }
-
-    .custom-report-iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
+    .admin-modal-overlay.active {
       display: block;
-      background: #222;
+      opacity: 1;
     }
-
-    .pdf-fallback-frame {
-      width: 100%;
-      height: 100%;
-      border: none;
+    .admin-modal-dialog {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.95);
+      width: 85%;
+      max-width: 320px;
+      background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 18px;
+      padding: 22px 20px;
+      z-index: 1001;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6);
+      text-align: center;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .admin-modal-dialog.active {
       display: block;
-      touch-action: pan-x pan-y pinch-zoom;
+      transform: translate(-50%, -50%) scale(1);
     }
-
-    .custom-toast {
-      position: fixed; top: 20px; left: 50%; transform: translate(-50%, -80px);
-      background: #333333; color: #ffffff; padding: 12px 20px; border-radius: 30px; font-size: 13px; font-weight: 600;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.18); z-index: 30000; display: flex; align-items: center; gap: 8px; opacity: 0;
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s; pointer-events: none; white-space: nowrap;
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
     }
-    .custom-toast.show { transform: translate(-50%, 0); opacity: 1; }
-    .toast-icon { width: 16px; height: 16px; }
-    .app-spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.2); border-top: 3px solid #fff; border-radius: 50%; animation: spin 0.75s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .modal-head-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 0.3px;
+    }
+    .modal-close-btn {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 6px;
+    }
+    /* プレースホルダーなし、桁数推測不可 */
+    .admin-pwd-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #2a2a2a;
+      border: 1.5px solid #444;
+      border-radius: 10px;
+      color: #ffffff;
+      font-size: 16px;
+      text-align: center;
+      outline: none;
+      box-sizing: border-box;
+      margin-bottom: 6px;
+    }
+    .admin-pwd-input:focus {
+      border-color: #8b5cf6;
+    }
+    .modal-err-text {
+      font-size: 12px;
+      color: #ef4444;
+      min-height: 18px;
+      margin-bottom: 10px;
+    }
+    .admin-submit-btn {
+      width: 100%;
+      padding: 12px 0;
+      background: #8b5cf6;
+      border: none;
+      border-radius: 10px;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .admin-submit-btn:active {
+      opacity: 0.85;
+    }
   </style>
 </head>
-<body id="app-body">
-  <div id="impersonation-banner-bar">
-    <div class="impersonation-notice">
-      <span class="impersonation-warn-mark">⚠︎</span>
-      <span id="impersonation-target-text">スタッフ として閲覧中</span>
-    </div>
-    <button type="button" class="revert-admin-btn" id="revert-admin-btn" onclick="executeRevertImpersonation()">管理者に戻る</button>
-  </div>
-  
-  <div id="today-loader" style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; background:#000; color:#fff;">
-    <div class="app-spinner"></div>
-    <div class="loader-text" style="margin-top:16px;">
-      <span id="loader-msg">レポートを読み込み中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
-    </div>
-  </div>
-  
-  <div id="app-container"></div>
-  
-  <div id="temp-account-banner-bar">
-    <span id="temp-banner-text">仮アカウントで閲覧中</span>
+<body>
+  <!-- 言語切替ボタン -->
+  <div class="lang-switcher">
+    <button type="button" id="btn-ja" class="lang-btn active" onclick="switchLang('ja')">JP</button>
+    <button type="button" id="btn-en" class="lang-btn" onclick="switchLang('en')">EN</button>
   </div>
 
-  <div class="modal-overlay" id="modal-overlay" onclick="closeModal()"></div>
-  
-  <!-- 通常ログインモーダル -->
-  <div class="modal-dialog" id="login-dialog">
-    <form id="login-form" onsubmit="handleLoginSubmit(event)" method="post" action="javascript:void(0);" autocomplete="on">
-      <div style="margin-bottom:14px; text-align:center;">
-        <div style="font-size:16px; font-weight:700; color:#222;" id="login-title">ログイン</div>
-      </div>
-      
-      <div id="login-guide-box" style="font-size:12px; color:#1e293b; background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 13px; margin-bottom:14px; line-height:1.6; text-align:left;">
-        <strong style="color:#0f172a; font-size:12.5px;">【新規入社・NPS発信に新規で参加した方へ】</strong><br>
-        アカウントをまだお持ちでない方は、<br>画面下の<strong>「新規入社の方はこちらから」</strong>をタップして<br>登録を行ってください。<br><br>
-        <div style="font-size:11.5px; color:#475569; padding-left:2px;">
-          ◯「登録して閲覧を開始」をタップ後、<br> 最大72時間仮アカウント(機能制限付き)で<br> レポートを閲覧いただけます。<br>
-          ◯ 仮アカウントから本登録アカウントへの移行は、<br> 自動で行われます。(完了後個別に通知)<br> 本登録アカウントのID/パスワードは、<br> 画面右上の<span class="inline-mail-icon"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></span>からご確認いただけます。
-        </div>
-      </div>
+  <!-- ★ アイコンタップエリア -->
+  <div class="icon-wrapper" id="secret-icon-btn">
+    <div class="icon floating" id="main-icon">🚧</div>
+  </div>
 
-      <div class="form-group">
-        <label class="form-label" for="login-uid" id="login-uid-label">ユーザーID</label>
-        <input type="text" id="login-uid" name="username" class="form-input" placeholder="ユーザーIDを入力" autocomplete="username" autocapitalize="none" autocorrect="off" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="login-pwd" id="login-pwd-label">パスワード</label>
-        <div class="password-input-wrapper">
-          <input type="password" id="login-pwd" name="password" class="form-input" placeholder="パスワードを入力" autocomplete="current-password" required>
-          <button type="button" class="pwd-toggle-btn" onclick="togglePasswordVisibility('login-pwd', this)" title="パスワードを表示">
-            <svg class="pwd-icon" viewBox="0 0 24 24">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-      <div id="login-err" class="form-err"></div>
-      <button type="submit" id="login-submit-btn" class="submit-btn">ログイン</button>
-      
-      <div style="text-align:center;">
-        <button type="button" class="switch-auth-mode-btn" id="switch-to-register-btn" onclick="openNewUserDialog()">新規入社の方はこちらから</button>
-      </div>
+  <h1 id="m-title">システムメンテナンス中</h1>
+  <p id="m-desc">現在、iOS 27対応に向けた<br>プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
+
+  <!-- ★ 管理者バイパス用パスワードモーダル -->
+  <div class="admin-modal-overlay" id="admin-overlay" onclick="closeAdminModal()"></div>
+  <div class="admin-modal-dialog" id="admin-dialog">
+    <div class="modal-head">
+      <div class="modal-head-title">Admin Bypass Authentication</div>
+      <button type="button" class="modal-close-btn" onclick="closeAdminModal()">✕</button>
+    </div>
+    <form onsubmit="handleAdminSubmit(event)">
+      <input type="password" id="admin-pass-input" class="admin-pwd-input" maxlength="32" inputmode="numeric" autocomplete="off">
+      <div id="admin-err-msg" class="modal-err-text"></div>
+      <button type="submit" id="admin-btn" class="admin-submit-btn">Authenticate</button>
     </form>
-  </div>
-
-  <!-- 新規入社専用セルフ登録モーダル -->
-  <div class="modal-dialog" id="new-user-dialog">
-    <form id="new-user-form" onsubmit="handleNewUserSubmit(event)" method="post" action="javascript:void(0);">
-      <div style="margin-bottom:14px; text-align:center;">
-        <div style="font-size:16px; font-weight:700; color:#222;" id="new-user-title">新規アカウントの仮登録</div>
-      </div>
-      
-      <div id="new-user-guide-box" style="font-size:12px; color:#4c1d95; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:12px 13px; margin-bottom:14px; line-height:1.6; text-align:left;">
-        ◯「上記情報で仮登録して閲覧を開始」をタップ後、<br> 最大72時間仮アカウント(機能制限付き)で<br> レポートを閲覧いただけます。<br>
-        ◯ 仮アカウントから本登録アカウントへの移行は、<br> 自動で行われます。(完了後個別に通知)<br> 本登録アカウントのID/パスワードは、<br> 画面右上の<span class="inline-mail-icon"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></span>からご確認いただけます。
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="nu-empid" id="nu-empid-label">① 社員番号 (4162◯◯◯◯)</label>
-        <div class="emp-id-input-wrap">
-          <span class="emp-id-prefix">4162</span>
-          <input type="tel" id="nu-empid" class="emp-id-input" placeholder="後4桁を入力" maxlength="4" pattern="\d{4}" required inputmode="numeric">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" id="nu-birth-label">② お誕生日（月・日）</label>
-        <div class="wheel-picker-wrap">
-          <div class="wheel-select-col">
-            <select id="nu-birth-month" class="wheel-select" onchange="updateBirthDayOptions()" required>
-              <option value="">誕生月</option>
-            </select>
-            <svg class="wheel-arrow" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
-          </div>
-          <div class="wheel-select-col">
-            <select id="nu-birth-day" class="wheel-select" required>
-              <option value="">日付</option>
-            </select>
-            <svg class="wheel-arrow" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="nu-name" id="nu-name-label">③ 氏名（フルネーム）</label>
-        <input type="text" id="nu-name" class="form-input" placeholder="例: 山田 太郎" required>
-      </div>
-
-      <div id="nu-err" class="form-err"></div>
-      
-      <button type="submit" id="nu-submit-btn" class="submit-btn" style="background:#a78bfa; color:#2e1065; font-weight:700;">上記情報で仮登録して閲覧を開始</button>
-      
-      <div style="text-align:center;">
-        <button type="button" class="switch-auth-mode-btn" id="switch-to-login-btn" style="color:#555;" onclick="openLoginDialog()">既存のアカウントでログイン</button>
-      </div>
-    </form>
-  </div>
-
-  <!-- マイページモーダル -->
-  <div class="modal-dialog" id="mypage-dialog">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-      <div style="font-size:16px; font-weight:700; color:#222;" id="mp-title">マイページ</div>
-      <button type="button" onclick="closeModal()" style="background:none; border:none; font-size:18px; color:#777; cursor:pointer;">✕</button>
-    </div>
-    
-    <div class="avatar-center-container">
-      <div class="avatar-preview-wrap">
-        <img id="mp-avatar-img" class="avatar-img" src="" style="display:none;" alt="icon">
-        <svg id="mp-avatar-placeholder" style="width:36px; height:36px; fill:#94a3b8;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-      </div>
-
-      <button type="button" id="avatar-owner-qr-btn" class="avatar-side-icon-btn" onclick="openOwnerQrModal()" title="権限付与用QRコードを表示">
-        <svg viewBox="0 0 24 24">
-          <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3zm-5-5h3v3h-3v-3zm-2-2h2v2h-2v-2zm7 7h2v2h-2v-2z"/>
-        </svg>
-      </button>
-
-      <button type="button" id="avatar-user-scan-btn" class="avatar-side-icon-btn" onclick="openQrScanModal()" title="権限更新（QRスキャン）">
-        <svg viewBox="0 0 24 24">
-          <path d="M4 4v5h2V6h3V4H4zm16 0h-5v2h3v3h2V4zM4 20h5v-2H6v-3H4v5zm16 0v-5h-2v3h-3v2h5zM3 11h18v2H3v-2z"/>
-        </svg>
-      </button>
-    </div>
-
-    <div style="text-align: center;">
-      <div id="mp-temp-pill-badge" class="mp-temp-pill-badge" style="display: none;">仮アカウントを利用中</div>
-    </div>
-
-    <div class="badge-card" id="mp-badge-card" style="margin-top: 14px;">
-      <div class="badge-row"><span id="mp-lbl-name">利用者氏名：</span><span class="badge-val" id="mp-name">-</span></div>
-      <div class="badge-row" style="margin-top: 6px;"><span id="mp-lbl-uid">ユーザーID：</span><span class="badge-val" id="mp-id">-</span></div>
-      
-      <div class="badge-row" id="mp-line-row" style="margin-top: 8px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
-        <span id="mp-lbl-line">LINEアカウント：</span>
-        <span id="mp-line-badge" class="status-dot-text unlinked"><span class="status-dot gray"></span>未連携</span>
-      </div>
-      
-      <div class="badge-row" id="mp-autologin-row" style="margin-top: 6px;">
-        <span id="mp-lbl-autologin">自動ログイン：</span>
-        <span id="mp-autologin-badge" class="status-dot-text unlinked"><span class="status-dot gray"></span>未設定</span>
-      </div>
-
-      <div class="badge-row" id="mp-lang-row" style="margin-top: 8px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
-        <span id="mp-lbl-lang">言語 / Language：</span>
-        <button type="button" class="lang-select-trigger" onclick="openLangSelectModal()">
-          <span id="mp-current-lang-display">日本語</span>
-          <span class="arrow">›</span>
-        </button>
-      </div>
-    </div>
-
-    <button type="button" id="pending-approval-btn" class="approval-btn" onclick="openPendingApprovalModal()">
-      <span id="mp-pending-label">承認待ち</span> <span id="pending-approval-count">0</span><span id="mp-pending-unit">件</span>
-    </button>
-
-    <button type="button" id="archive-site-btn" class="archive-btn" style="display: none;" onclick="redirectToArchive()">アーカイブサイトを開く<br>※ID/PASSの変更もこちらから</button>
-    <div id="logout-btn-wrap" style="text-align: center; display: none;">
-      <button type="button" class="logout-link" id="mp-logout-link" onclick="openLogoutConfirm()">ログアウト</button>
-    </div>
-  </div>
-
-  <!-- 言語選択モーダル -->
-  <div class="modal-dialog" id="lang-select-dialog">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-      <div style="font-size:15.5px; font-weight:700; color:#1e293b;" id="lang-modal-title">言語の選択 / Language</div>
-      <button type="button" onclick="closeLangSelectModal()" style="background:none; border:none; font-size:18px; color:#94a3b8; cursor:pointer;">✕</button>
-    </div>
-    <div class="lang-list">
-      <div class="lang-item" id="lang-opt-ja" onclick="selectAppLanguage('ja')">
-        <span>日本語</span>
-        <span class="check">✓</span>
-      </div>
-      <div class="lang-item" id="lang-opt-en" onclick="selectAppLanguage('en')">
-        <span>English</span>
-        <span class="check">✓</span>
-      </div>
-      <div class="lang-item" id="lang-opt-ko" onclick="selectAppLanguage('ko')">
-        <span>한국어</span>
-        <span class="check">✓</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- オーナー専用: 権限変更QR表示モーダル -->
-  <div class="modal-dialog" id="owner-qr-dialog">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <div style="font-size:16px; font-weight:700; color:#1e293b;" id="owner-qr-title">権限付与用QRコード</div>
-      <button type="button" onclick="closeOwnerQrModal()" style="background:none; border:none; font-size:18px; color:#777; cursor:pointer;">✕</button>
-    </div>
-
-    <div class="qr-tab-wrap">
-      <button type="button" id="qr-tab-admin" class="qr-tab-btn admin active" onclick="switchQrRole('@admin')">@admin に変更</button>
-      <button type="button" id="qr-tab-user" class="qr-tab-btn user" onclick="switchQrRole('user')">一般 に変更</button>
-    </div>
-
-    <div class="qr-code-img-wrap" id="qr-display-container">
-      <div style="font-size:12px; color:#888;">QRコード生成中...</div>
-    </div>
-
-    <div class="qr-timer-text" id="qr-timer-text">有効期限: 残り 05:00</div>
-  </div>
-
-  <!-- スタッフ用: QRコードスキャンモーダル -->
-  <div class="modal-dialog" id="user-qr-scan-dialog" style="max-width:320px; text-align:center;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <div style="font-size:16px; font-weight:700; color:#1e293b;" id="user-qr-scan-title">QRコードを読み取る</div>
-      <button type="button" onclick="closeQrScanModal()" style="background:none; border:none; font-size:18px; color:#777; cursor:pointer;">✕</button>
-    </div>
-
-    <div id="qr-reader-video" style="display:none; width:0; height:0; overflow:hidden;"></div>
-    <div id="qr-scan-status-text" style="font-size:12px; color:#64748b; min-height:14px; margin-bottom:6px;"></div>
-
-    <button type="button" class="qr-big-scan-action-btn" onclick="document.getElementById('qr-file-input').click()">
-      <svg viewBox="0 0 24 24">
-        <path d="M4 4v5h2V6h3V4H4zm16 0h-5v2h3v3h2V4zM4 20h5v-2H6v-3H4v5zm16 0v-5h-2v3h-3v2h5zM3 11h18v2H3v-2z"/>
-      </svg>
-      <span class="qr-big-scan-label" id="qr-big-scan-label">カメラで撮影して読み取る</span>
-    </button>
-    <input type="file" id="qr-file-input" accept="image/*" capture="environment" style="display:none;" onchange="handleQrFileScan(this)">
-  </div>
-
-  <!-- 承認待ちモーダル -->
-  <div class="modal-dialog" id="approval-list-dialog">
-    <div class="approval-modal-header">
-      <div class="approval-modal-title" id="approval-list-modal-title">承認待ち</div>
-      <button type="button" class="approval-modal-close" onclick="closeApprovalListModal()">✕</button>
-    </div>
-    <div id="approval-list-content"></div>
-  </div>
-
-  <div class="modal-overlay confirm-overlay" id="confirm-overlay" onclick="closeLogoutConfirm()"></div>
-  <div class="confirm-dialog" id="confirm-dialog">
-    <div class="confirm-title" id="confirm-logout-title">ログアウト確認</div>
-    <div class="confirm-desc" id="confirm-logout-desc">ログアウトしますか？<br>次回閲覧には再ログインが必要です。<br><span style="font-size: 11px; color: #888; display: block; margin-top: 6px;">※一部環境ではログアウトボタンのタップ後に<br>ご自身でリロード(再読み込み)が<br>必要になる場合があります</span></div>
-    <div class="confirm-actions">
-      <button type="button" class="confirm-btn confirm-cancel" id="confirm-logout-cancel" onclick="closeLogoutConfirm()">キャンセル</button>
-      <button type="button" class="confirm-btn confirm-ok" id="confirm-logout-ok" onclick="executeLogout()">ログアウト</button>
-    </div>
-  </div>
-
-  <div class="modal-overlay confirm-overlay" id="inquiry-unread-overlay" onclick="closeUnreadConfirm()"></div>
-  <div class="confirm-dialog" id="inquiry-unread-dialog">
-    <div class="confirm-title" id="unread-msg-title">新着メッセージ</div>
-    <div class="confirm-desc" id="unread-msg-desc">未読のメッセージがあります。<br>メッセージを開封しますか？</div>
-    <div class="confirm-actions">
-      <button type="button" class="confirm-btn confirm-cancel" id="unread-msg-cancel" onclick="closeUnreadConfirm()">後で</button>
-      <button type="button" class="confirm-btn confirm-open-btn" id="unread-msg-ok" onclick="confirmOpenUnreadInquiry()">開封する</button>
-    </div>
-  </div>
-  
-  <div class="modal-overlay confirm-overlay" id="approve-confirm-overlay" onclick="closeApproveConfirm()"></div>
-  <div class="confirm-dialog" id="approve-confirm-dialog">
-    <div class="confirm-title" id="approve-dialog-title">本登録の承認</div>
-    <div class="confirm-desc" id="approve-confirm-desc"></div>
-    <div class="confirm-actions">
-      <button type="button" class="confirm-btn confirm-cancel" id="approve-cancel-btn" onclick="closeApproveConfirm()">キャンセル</button>
-      <button type="button" class="confirm-btn confirm-approve-btn" id="approve-ok-btn" onclick="executeApproveUser()">承認する</button>
-    </div>
-  </div>
-
-  <div class="modal-overlay confirm-overlay" id="impersonate-confirm-overlay" onclick="closeImpersonateConfirm()"></div>
-  <div class="confirm-dialog" id="impersonate-confirm-dialog">
-    <div class="confirm-title" id="impersonate-dialog-title">成り代わり確認</div>
-    <div class="confirm-desc" id="impersonate-confirm-desc">対象のスタッフとして閲覧を開始しますか？<br>いつでも「管理者に戻る」ことができます。</div>
-    <div class="confirm-actions">
-      <button type="button" class="confirm-btn confirm-cancel" id="impersonate-cancel-btn" onclick="closeImpersonateConfirm()">キャンセル</button>
-      <button type="button" class="confirm-btn confirm-impersonate-btn" id="impersonate-ok-btn" onclick="executeImpersonate()">ログイン</button>
-    </div>
-  </div>
-  
-  <div class="custom-toast" id="custom-toast">
-    <svg class="toast-icon" id="toast-svg-icon" viewBox="0 0 24 24"></svg>
-    <span id="toast-text">メッセージ</span>
   </div>
 
   <script>
-    // ==========================================
-    // ★ 連携URL & 設定情報
-    // ==========================================
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
-    const GAS_BACKEND_API_URL = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
+    const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
-
-    const TOKEN_KEY = 'daily_report_session_token';
-    const LANG_KEY = 'daily_report_user_lang';
-    const GUEST_ID = 'yuzu4162';
-    const MIZUKI_USER_ID = 'mizuki.ao.0711@icloud.com';
     
-    let SERVER_LINE_UID = '';
-    let currentLang = localStorage.getItem(LANG_KEY) || 'ja';
-    let currentUser = { userId: '', userName: '', avatarUrl: '', isGuest: false, isLineLinked: false, role: 'user', lang: 'ja', isTemporary: false, tempExpireEpoch: null, isImpersonated: false, originalRole: '' };
-    let toastTimer = null;
-    let countdownInterval = null;
-    
-    let isChatOpen = false;
-    let currentComments = [];
-    let currentReportDateSuffix = '';
-    let cachedReportHtmlContent = '';
-    let activeReactionMenuRow = null;
-    let isInquiryOpen = false;
-    let currentInquiryTargetUserId = '';
-    let currentInquiryPartnerObj = null;
-    let pendingImpersonateTargetId = '';
-    let pendingApproveTargetId = '';
-    let pendingApproveTargetName = '';
-    let inquiryRooms = [];
-    let inquiryMessages = [];
-    let unreadInquiryCount = 0;
-    let pendingApprovalCount = 0;
+    // ★ 正しい「1126」のSHA-256ハッシュ値に修正完了
+    const AUTH_HASH = '5817ae4948371f9b6b7d94615c0704e6a13ba5a773938351ebd832d0fcdbdf2f';
 
-    let currentQrRole = '@admin';
-    let currentQrExpireEpoch = 0;
-    let qrTimerInterval = null;
-    let html5QrScannerInstance = null;
-    let isProcessingQrScan = false;
-    
-    const PATH_EYE_OPEN = "M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z";
-    const PATH_EYE_SLASH = "M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.17c0-1.66-1.34-3-3-3l-.17.02z";
-
-    // ==========================================
-    // ★ 3言語対応辞書 (i18n: ja / en / ko)
-    // ==========================================
-    const I18N = {
-      ja: {
-        loadingReport: 'レポートを読み込み中',
-        checkingLine: 'アカウントの連携状態を確認中',
-        reportNotFound: 'レポートが見つかりませんでした。',
-        login: 'ログイン',
-        inquiryOnly: '問い合わせ専用',
-        unreadTip: '未読のメッセージがあります',
-        browsingAs: 'として閲覧中',
-        backToAdmin: '管理者に戻る',
-        tempAccountBanner: '仮アカウントで閲覧中',
-        tempExpiredBanner: '有効期限が終了しました',
-        noComments: 'まだコメントはありません',
-        commentDisplayErr: '表示エラーが発生しました',
-        commentPlaceholder: 'コメントを入力...',
-        commentPosted: 'コメントを投稿しました',
-        inquiryPlaceholder: 'メッセージを入力...',
-        inquirySent: 'メッセージを送信しました',
-        inquiryHeaderAdmin: 'お問い合わせ（管理者宛て）',
-        inquiryLoadingRooms: 'トーク一覧を読み込み中',
-        inquiryNoUsers: 'ユーザーが見つかりません',
-        inquiryLoadingMsgs: 'メッセージを読み込み中',
-        inquiryNoMsgs: 'まだメッセージはありません',
-        impersonateBtn: '成り代わり',
-        chatListBtn: '一覧',
-        myPageTitle: 'マイページ',
-        lblUserName: '利用者氏名：',
-        lblUserId: 'ユーザーID：',
-        lblLine: 'LINEアカウント：',
-        lblAutologin: '自動ログイン：',
-        lblLanguage: '言語 / Language：',
-        langModalTitle: '言語の選択 / Language',
-        statusLinked: '連携済み',
-        statusUnlinked: '未連携',
-        statusEnabled: '設定済み',
-        statusDisabled: '未設定',
-        tempUsingBadge: '仮アカウントを利用中',
-        pendingApprovals: '承認待ち',
-        unitItems: '件',
-        archiveBtn: 'アーカイブサイトを開く\n※ID/PASSの変更もこちらから',
-        logout: 'ログアウト',
-        qrRoleTitle: '権限付与用QRコード',
-        qrToAdmin: '@admin に変更',
-        qrToUser: '一般 に変更',
-        qrGenerating: 'QRコード生成中...',
-        qrExpireRemaining: '有効期限: 残り',
-        qrExpired: '有効期限切れ',
-        qrScanTitle: 'QRコードを読み取る',
-        qrScanBtnLabel: 'カメラで撮影して読み取る',
-        qrAnalyzing: '画像を解析中...',
-        qrUpdating: '権限を更新中...',
-        qrFailedDetect: 'QRコードを検出できませんでした。もう一度撮影してください',
-        approvalListTitle: '承認待ち',
-        approvalEmpty: '現在、承認待ちの仮登録はありません',
-        approveBtn: '本登録を承認',
-        hoursLeft: '残り{0}時間',
-        logoutConfirmTitle: 'ログアウト確認',
-        logoutConfirmDesc: 'ログアウトしますか？<br>次回閲覧には再ログインが必要です。<br><span style="font-size: 11px; color: #888; display: block; margin-top: 6px;">※一部環境ではログアウトボタンのタップ後に<br>ご自身でリロード(再読み込み)が<br>必要になる場合があります</span>',
-        cancel: 'キャンセル',
-        newMsgTitle: '新着メッセージ',
-        newMsgDesc: '未読のメッセージがあります。<br>メッセージを開封しますか？',
-        openNow: '開封する',
-        later: '後で',
-        approveDialogTitle: '本登録の承認',
-        impersonateDialogTitle: '成り代わり確認',
-        impersonateDesc: '対象のスタッフとして閲覧を開始しますか？<br>いつでも「管理者に戻る」ことができます。',
-        justNow: 'たった今',
-        you: '自分'
-      },
-      en: {
-        loadingReport: 'Loading daily report',
-        checkingLine: 'Checking LINE account link',
-        reportNotFound: 'Daily report was not found.',
-        login: 'Login',
-        inquiryOnly: 'Inquiry Only',
-        unreadTip: 'You have unread messages',
-        browsingAs: 'Browsing as',
-        backToAdmin: 'Back to Admin',
-        tempAccountBanner: 'Browsing with temporary account',
-        tempExpiredBanner: 'Expiration period ended',
-        noComments: 'No comments yet',
-        commentDisplayErr: 'Failed to display comments',
-        commentPlaceholder: 'Write a comment...',
-        commentPosted: 'Comment posted successfully',
-        inquiryPlaceholder: 'Write a message...',
-        inquirySent: 'Message sent successfully',
-        inquiryHeaderAdmin: 'Contact Administrator',
-        inquiryLoadingRooms: 'Loading message list',
-        inquiryNoUsers: 'No users found',
-        inquiryLoadingMsgs: 'Loading messages',
-        inquiryNoMsgs: 'No messages yet',
-        impersonateBtn: 'Impersonate',
-        chatListBtn: 'All Chats',
-        myPageTitle: 'My Page',
-        lblUserName: 'Full Name:',
-        lblUserId: 'User ID:',
-        lblLine: 'LINE Account:',
-        lblAutologin: 'Auto Login:',
-        lblLanguage: 'Language / 언어:',
-        langModalTitle: 'Select Language / 언어 선택',
-        statusLinked: 'Connected',
-        statusUnlinked: 'Not Connected',
-        statusEnabled: 'Enabled',
-        statusDisabled: 'Disabled',
-        tempUsingBadge: 'Temporary Account Active',
-        pendingApprovals: 'Pending Approvals',
-        unitItems: '',
-        archiveBtn: 'Open Archive Site\n※Change ID/Password here',
-        logout: 'Logout',
-        qrRoleTitle: 'Role Grant QR Code',
-        qrToAdmin: 'Set to @admin',
-        qrToUser: 'Set to User',
-        qrGenerating: 'Generating QR code...',
-        qrExpireRemaining: 'Expires in:',
-        qrExpired: 'Expired',
-        qrScanTitle: 'Scan QR Code',
-        qrScanBtnLabel: 'Take Photo & Scan QR',
-        qrAnalyzing: 'Analyzing image...',
-        qrUpdating: 'Updating role...',
-        qrFailedDetect: 'QR code not detected. Please capture again.',
-        approvalListTitle: 'Pending Approvals',
-        approvalEmpty: 'No pending temporary registrations',
-        approveBtn: 'Approve User',
-        hoursLeft: '{0}h left',
-        logoutConfirmTitle: 'Logout Confirmation',
-        logoutConfirmDesc: 'Are you sure you want to logout?<br>Re-login is required on your next visit.',
-        cancel: 'Cancel',
-        newMsgTitle: 'New Message',
-        newMsgDesc: 'You have unread messages.<br>Would you like to open it now?',
-        openNow: 'Open',
-        later: 'Later',
-        approveDialogTitle: 'Account Approval',
-        impersonateDialogTitle: 'Impersonation Confirmation',
-        impersonateDesc: 'Start browsing as this staff member?<br>You can switch back to Admin anytime.',
-        justNow: 'Just now',
-        you: 'You'
-      },
-      ko: {
-        loadingReport: '보고서를 불러오는 중입니다',
-        checkingLine: 'LINE 계정 연동 상태를 확인 중입니다',
-        reportNotFound: '보고서를 찾을 수 없습니다.',
-        login: '로그인',
-        inquiryOnly: '문의 전용',
-        unreadTip: '읽지 않은 메시지가 있습니다',
-        browsingAs: '님으로 열람 중',
-        backToAdmin: '관리자로 복귀',
-        tempAccountBanner: '임시 계정으로 열람 중입니다',
-        tempExpiredBanner: '유효기간이 만료되었습니다',
-        noComments: '아직 등록된 코멘트가 없습니다',
-        commentDisplayErr: '표시 중 오류가 발생했습니다',
-        commentPlaceholder: '코멘트를 입력하세요...',
-        commentPosted: '코멘트를 등록했습니다',
-        inquiryPlaceholder: '메시지를 입력하세요...',
-        inquirySent: '메시지를 보냈습니다',
-        inquiryHeaderAdmin: '문의하기 (관리자 앞)',
-        inquiryLoadingRooms: '대화 목록을 불러오는 중입니다',
-        inquiryNoUsers: '사용자를 찾을 수 없습니다',
-        inquiryLoadingMsgs: '메시지를 불러오는 중입니다',
-        inquiryNoMsgs: '아직 주고받은 메시지가 없습니다',
-        impersonateBtn: '대리 로그인',
-        chatListBtn: '목록',
-        myPageTitle: '마이페이지',
-        lblUserName: '사용자 이름:',
-        lblUserId: '사용자 ID:',
-        lblLine: 'LINE 계정:',
-        lblAutologin: '자동 로그인:',
-        lblLanguage: '언어 설정 / Language:',
-        langModalTitle: '언어 선택 / Select Language',
-        statusLinked: '연동됨',
-        statusUnlinked: '미연동',
-        statusEnabled: '설정됨',
-        statusDisabled: '미설정',
-        tempUsingBadge: '임시 계정 이용 중',
-        pendingApprovals: '승인 대기',
-        unitItems: '건',
-        archiveBtn: '아카이브 사이트 열기\n※ID/비밀번호 변경도 여기서 가능합니다',
-        logout: '로그아웃',
-        qrRoleTitle: '권한 부여용 QR 코드',
-        qrToAdmin: '@admin 권한으로 변경',
-        qrToUser: '일반 권한으로 변경',
-        qrGenerating: 'QR 코드 생성 중...',
-        qrExpireRemaining: '유효기간: 남은 시간',
-        qrExpired: '유효기간 만료',
-        qrScanTitle: 'QR 코드 스캔',
-        qrScanBtnLabel: '카메라로 촬영하여 스캔',
-        qrAnalyzing: '이미지를 분석 중입니다...',
-        qrUpdating: '권한을 업데이트 중입니다...',
-        qrFailedDetect: 'QR 코드를 인식하지 못했습니다. 다시 촬영해 주세요',
-        approvalListTitle: '승인 대기 목록',
-        approvalEmpty: '현재 승인 대기 중인 계정이 없습니다',
-        approveBtn: '정식 계정 승인',
-        hoursLeft: '남은 시간 {0}시간',
-        logoutConfirmTitle: '로그아웃 확인',
-        logoutConfirmDesc: '로그아웃하시겠습니까?<br>다음 열람 시 다시 로그인이 필요합니다.',
-        cancel: '취소',
-        newMsgTitle: '새 메시지 알림',
-        newMsgDesc: '읽지 않은 새 메시지가 있습니다.<br>지금 확인하시겠습니까?',
-        openNow: '확인하기',
-        later: '나중에',
-        approveDialogTitle: '정식 등록 승인',
-        impersonateDialogTitle: '대리 로그인 확인',
-        impersonateDesc: '해당 스태프의 화면으로 열람을 시작하시겠습니까?<br>상단 바에서 언제든지 관리자로 복귀할 수 있습니다.',
-        justNow: '방금 전',
-        you: '나'
-      }
-    };
-
-    function t(key, ...args) {
-      const dict = I18N[currentLang] || I18N.ja;
-      let text = dict[key] || I18N.ja[key] || '';
-      args.forEach((val, idx) => {
-        text = text.replace(new RegExp(`\\{${idx}\\}`, 'g'), val);
-      });
-      return text;
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    function formatReportHeaderDate(dateKey) {
-      if (!dateKey || typeof dateKey !== 'string' || dateKey.length !== 8) {
-        if (currentLang === 'en') return 'Daily Report';
-        if (currentLang === 'ko') return '일일 보고서';
-        return '日次レポート';
-      }
-      try {
-        const y = parseInt(dateKey.substring(0, 4), 10);
-        const m = parseInt(dateKey.substring(4, 6), 10);
-        const d = parseInt(dateKey.substring(6, 8), 10);
-        const dateObj = new Date(y, m - 1, d);
-        if (isNaN(dateObj.getTime())) {
-          if (currentLang === 'en') return 'Daily Report';
-          if (currentLang === 'ko') return '일일 보고서';
-          return '日次レポート';
-        }
+    function getQueryParam(key) {
+      const urlParams = new URLSearchParams(window.location.search);
+      let val = urlParams.get(key);
+      if (val) return val;
 
-        if (currentLang === 'en') {
-          const enDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-          const enMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          return `${enDays[dateObj.getDay()]}, ${enMonths[m - 1]} ${d}, ${y}`;
-        } else if (currentLang === 'ko') {
-          const koDays = ['일', '월', '화', '수', '목', '금', '토'];
-          const mm = String(m).padStart(2, '0');
-          const dd = String(d).padStart(2, '0');
-          return `${y}년 ${mm}월 ${dd}일 (${koDays[dateObj.getDay()]})`;
-        } else {
-          const jaDays = ['日', '月', '火', '水', '木', '金', '土'];
-          const mm = String(m).padStart(2, '0');
-          const dd = String(d).padStart(2, '0');
-          return `${y}年${mm}月${dd}日 (${jaDays[dateObj.getDay()]})`;
+      const liffState = urlParams.get('liff.state');
+      if (liffState) {
+        const decodedState = decodeURIComponent(liffState);
+        const stateQueryIndex = decodedState.indexOf('?');
+        if (stateQueryIndex !== -1) {
+          const stateParams = new URLSearchParams(decodedState.substring(stateQueryIndex));
+          val = stateParams.get(key);
+          if (val) return val;
         }
-      } catch (e) {
-        return currentLang === 'en' ? 'Daily Report' : (currentLang === 'ko' ? '일일 보고서' : '日次レポート');
+      }
+
+      if (window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        val = hashParams.get(key);
+        if (val) return val;
+      }
+      return null;
+    }
+
+    // アイコン5回連打判定
+    let tapCount = 0;
+    let tapResetTimer = null;
+    let isBypassing = false;
+
+    const iconBtn = document.getElementById('secret-icon-btn');
+    const iconEl = document.getElementById('main-icon');
+
+    function handleIconSecretTap(e) {
+      if (isBypassing) return;
+      if (e) e.preventDefault();
+
+      tapCount++;
+
+      iconEl.classList.remove('floating');
+      iconEl.classList.add('tapped');
+      setTimeout(() => {
+        iconEl.classList.remove('tapped');
+        if (!isBypassing && tapCount === 0) iconEl.classList.add('floating');
+      }, 100);
+
+      clearTimeout(tapResetTimer);
+      tapResetTimer = setTimeout(() => {
+        tapCount = 0;
+        if (!isBypassing) iconEl.classList.add('floating');
+      }, 2000);
+
+      if (tapCount >= 5) {
+        tapCount = 0;
+        clearTimeout(tapResetTimer);
+        openAdminModal();
       }
     }
 
-    function applyTranslations() {
-      try {
-        const isEn = currentLang === 'en';
-        const isKo = currentLang === 'ko';
-        document.documentElement.lang = currentLang;
+    iconBtn.addEventListener('touchstart', handleIconSecretTap, { passive: false });
+    iconBtn.addEventListener('click', handleIconSecretTap);
 
-        const headerTitleEl = document.querySelector('#today-header-bar .header-title');
-        if (headerTitleEl && currentReportDateSuffix) {
-          headerTitleEl.innerText = formatReportHeaderDate(currentReportDateSuffix);
+    function openAdminModal() {
+      document.getElementById('admin-overlay').classList.add('active');
+      document.getElementById('admin-dialog').classList.add('active');
+      const input = document.getElementById('admin-pass-input');
+      input.value = '';
+      document.getElementById('admin-err-msg').innerText = '';
+      setTimeout(() => input.focus(), 150);
+    }
+
+    function closeAdminModal() {
+      document.getElementById('admin-overlay').classList.remove('active');
+      document.getElementById('admin-dialog').classList.remove('active');
+      document.getElementById('admin-pass-input').value = '';
+      document.getElementById('admin-err-msg').innerText = '';
+    }
+
+    async function handleAdminSubmit(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('admin-pass-input');
+      const err = document.getElementById('admin-err-msg');
+      const btn = document.getElementById('admin-btn');
+      
+      // 全角数字や空白を自動で半角に整える
+      const val = input.value.trim().normalize('NFKC');
+
+      btn.disabled = true;
+
+      const inputHash = await sha256(val);
+
+      if (inputHash === AUTH_HASH) {
+        isBypassing = true;
+        err.innerText = '';
+        btn.innerText = 'Verifying...';
+        
+        if (navigator.vibrate) {
+          try { navigator.vibrate([40, 60, 40]); } catch (err) {}
         }
 
-        const loaderMsg = document.getElementById('loader-msg');
-        if (loaderMsg && loaderMsg.innerText.includes('レポート')) loaderMsg.innerText = t('loadingReport');
-
-        const mpTitle = document.getElementById('mp-title');
-        if (mpTitle) mpTitle.innerText = t('myPageTitle');
-        const mpNameLbl = document.getElementById('mp-lbl-name');
-        if (mpNameLbl) mpNameLbl.innerText = t('lblUserName');
-        const mpUidLbl = document.getElementById('mp-lbl-uid');
-        if (mpUidLbl) mpUidLbl.innerText = t('lblUserId');
-        const mpLineLbl = document.getElementById('mp-lbl-line');
-        if (mpLineLbl) mpLineLbl.innerText = t('lblLine');
-        const mpAutoLbl = document.getElementById('mp-lbl-autologin');
-        if (mpAutoLbl) mpAutoLbl.innerText = t('lblAutologin');
-        const mpLangLbl = document.getElementById('mp-lbl-lang');
-        if (mpLangLbl) mpLangLbl.innerText = t('lblLanguage');
-
-        const curLangDisp = document.getElementById('mp-current-lang-display');
-        if (curLangDisp) {
-          if (currentLang === 'en') curLangDisp.innerText = 'English';
-          else if (currentLang === 'ko') curLangDisp.innerText = '한국어';
-          else curLangDisp.innerText = '日本語';
+        setTimeout(() => {
+          executeBypassRedirect();
+        }, 300);
+      } else {
+        btn.disabled = false;
+        err.innerText = 'Invalid passcode';
+        input.value = '';
+        input.focus();
+        if (navigator.vibrate) {
+          try { navigator.vibrate(100); } catch (err) {}
         }
-
-        const tempPill = document.getElementById('mp-temp-pill-badge');
-        if (tempPill) tempPill.innerText = t('tempUsingBadge');
-        const pendingLbl = document.getElementById('mp-pending-label');
-        if (pendingLbl) pendingLbl.innerText = t('pendingApprovals');
-        const pendingUnit = document.getElementById('mp-pending-unit');
-        if (pendingUnit) pendingUnit.innerText = t('unitItems');
-        const archiveBtn = document.getElementById('archive-site-btn');
-        if (archiveBtn) archiveBtn.innerText = t('archiveBtn');
-        const logoutLink = document.getElementById('mp-logout-link');
-        if (logoutLink) logoutLink.innerText = t('logout');
-
-        const lineBadge = document.getElementById('mp-line-badge');
-        const autologinBadge = document.getElementById('mp-autologin-badge');
-        if (lineBadge && autologinBadge) {
-          if (currentUser.isLineLinked) {
-            lineBadge.className = 'status-dot-text linked';
-            lineBadge.innerHTML = `<span class="status-dot green"></span>${t('statusLinked')}`;
-            autologinBadge.className = 'status-dot-text linked';
-            autologinBadge.innerHTML = `<span class="status-dot green"></span>${t('statusEnabled')}`;
-          } else {
-            lineBadge.className = 'status-dot-text unlinked';
-            lineBadge.innerHTML = `<span class="status-dot gray"></span>${t('statusUnlinked')}`;
-            autologinBadge.className = 'status-dot-text unlinked';
-            autologinBadge.innerHTML = `<span class="status-dot gray"></span>${t('statusDisabled')}`;
-          }
-        }
-
-        const langModalTitle = document.getElementById('lang-modal-title');
-        if (langModalTitle) langModalTitle.innerText = t('langModalTitle');
-        ['ja', 'en', 'ko'].forEach(lg => {
-          const item = document.getElementById(`lang-opt-${lg}`);
-          if (item) {
-            if (lg === currentLang) item.classList.add('selected');
-            else item.classList.remove('selected');
-          }
-        });
-
-        const revertBtn = document.getElementById('revert-admin-btn');
-        if (revertBtn) revertBtn.innerText = t('backToAdmin');
-        const tempBanner = document.getElementById('temp-banner-text');
-        if (tempBanner) tempBanner.innerText = t('tempAccountBanner');
-
-        const chatInput = document.getElementById('chat-main-input');
-        if (chatInput) chatInput.placeholder = t('commentPlaceholder');
-        const inqInput = document.getElementById('inquiry-main-input');
-        if (inqInput) inqInput.placeholder = t('inquiryPlaceholder');
-
-        const ownerQrTitle = document.getElementById('owner-qr-title');
-        if (ownerQrTitle) ownerQrTitle.innerText = t('qrRoleTitle');
-        const qrTabAdmin = document.getElementById('qr-tab-admin');
-        if (qrTabAdmin) qrTabAdmin.innerText = t('qrToAdmin');
-        const qrTabUser = document.getElementById('qr-tab-user');
-        if (qrTabUser) qrTabUser.innerText = t('qrToUser');
-        const userScanTitle = document.getElementById('user-qr-scan-title');
-        if (userScanTitle) userScanTitle.innerText = t('qrScanTitle');
-        const qrBigLabel = document.getElementById('qr-big-scan-label');
-        if (qrBigLabel) qrBigLabel.innerText = t('qrScanBtnLabel');
-
-        const appModalTitle = document.getElementById('approval-list-modal-title');
-        if (appModalTitle) appModalTitle.innerText = t('approvalListTitle');
-        const confirmLogoutTitle = document.getElementById('confirm-logout-title');
-        if (confirmLogoutTitle) confirmLogoutTitle.innerText = t('logoutConfirmTitle');
-        const confirmLogoutDesc = document.getElementById('confirm-logout-desc');
-        if (confirmLogoutDesc) confirmLogoutDesc.innerHTML = t('logoutConfirmDesc');
-        const confirmLogoutCancel = document.getElementById('confirm-logout-cancel');
-        if (confirmLogoutCancel) confirmLogoutCancel.innerText = t('cancel');
-        const confirmLogoutOk = document.getElementById('confirm-logout-ok');
-        if (confirmLogoutOk) confirmLogoutOk.innerText = t('logout');
-
-        const unreadTitle = document.getElementById('unread-msg-title');
-        if (unreadTitle) unreadTitle.innerText = t('newMsgTitle');
-        const unreadDesc = document.getElementById('unread-msg-desc');
-        if (unreadDesc) unreadDesc.innerHTML = t('newMsgDesc');
-        const unreadCancel = document.getElementById('unread-msg-cancel');
-        if (unreadCancel) unreadCancel.innerText = t('later');
-        const unreadOk = document.getElementById('unread-msg-ok');
-        if (unreadOk) unreadOk.innerText = t('openNow');
-
-        const approveTitle = document.getElementById('approve-dialog-title');
-        if (approveTitle) approveTitle.innerText = t('approveDialogTitle');
-        const approveCancel = document.getElementById('approve-cancel-btn');
-        if (approveCancel) approveCancel.innerText = t('cancel');
-        const approveOk = document.getElementById('approve-ok-btn');
-        if (approveOk) approveOk.innerText = isEn ? 'Approve' : (isKo ? '승인' : '承認する');
-
-        const impTitle = document.getElementById('impersonate-dialog-title');
-        if (impTitle) impTitle.innerText = t('impersonateDialogTitle');
-        const impDesc = document.getElementById('impersonate-confirm-desc');
-        if (impDesc) impDesc.innerHTML = t('impersonateDesc');
-        const impCancel = document.getElementById('impersonate-cancel-btn');
-        if (impCancel) impCancel.innerText = t('cancel');
-        const impOk = document.getElementById('impersonate-ok-btn');
-        if (impOk) impOk.innerText = t('login');
-
-        applyGuestCommentRestrictions();
-        updateCommentUI();
-        updateImpersonationBanner();
-      } catch (err) {
-        console.error('applyTranslations error:', err);
       }
+      return false;
     }
 
-    function openLangSelectModal() {
-      document.getElementById('mypage-dialog').classList.remove('active');
-      document.getElementById('modal-overlay').classList.add('active');
-      document.getElementById('lang-select-dialog').classList.add('active');
-    }
+    async function executeBypassRedirect() {
+      const appType = getQueryParam('app');
+      const isArchive = (appType === 'archive');
+      const dateTarget = getQueryParam('target') || '';
+      const baseUrl = isArchive ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
 
-    function closeLangSelectModal() {
-      document.getElementById('lang-select-dialog').classList.remove('active');
-      document.getElementById('mypage-dialog').classList.add('active');
-    }
-
-    function selectAppLanguage(lang) {
-      if (!['ja', 'en', 'ko'].includes(lang)) lang = 'ja';
-      currentLang = lang;
-      localStorage.setItem(LANG_KEY, currentLang);
-      currentUser.lang = currentLang;
-      applyTranslations();
-      closeLangSelectModal();
-
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (token) {
-        callApiWithRetry('updateUserLanguage', { sessionToken: token, language: currentLang }, function(res) {
-          if (res && res.success) {
-            let msg = '言語を日本語に設定しました';
-            if (currentLang === 'en') msg = 'Language set to English';
-            if (currentLang === 'ko') msg = '언어가 한국어로 설정되었습니다';
-            showToast(msg, 'success');
-          }
-        });
-      }
-    }
-    
-    // ==========================================
-    // ★ GASバックエンド API呼び出しクライアント (fetch)
-    // ==========================================
-    async function callApiWithRetry(action, params = {}, onSuccess, onError) {
-      const payload = { action: action, params: params };
-      try {
-        const res = await fetch(GAS_BACKEND_API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload),
-          redirect: 'follow'
-        });
-        const data = await res.json();
-        if (onSuccess) onSuccess(data);
-      } catch (err) {
-        console.error(`[API ERROR: ${action}]`, err);
-        if (onError) onError(err);
-      }
-    }
-
-    // ==========================================
-    // アプリケーション初期化 & LIFF認証
-    // ==========================================
-    window.onload = async function() {
-      initBirthDatePicker();
-
-      document.addEventListener('click', function(e) {
-        if (activeReactionMenuRow) {
-          const menu = document.querySelector('.reaction-popup-menu');
-          if (menu && !menu.contains(e.target)) {
-            closeAllReactionMenus();
-          }
-        }
-      });
-
-      // 1. LIFF初期化からLINE UIDを取得
       try {
         await liff.init({ liffId: MY_LIFF_ID });
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          SERVER_LINE_UID = profile.userId || '';
-        }
-      } catch (liffErr) {
-        console.warn('LIFF init warning:', liffErr);
-        const urlParams = new URLSearchParams(window.location.search);
-        SERVER_LINE_UID = urlParams.get('line_uid') || '';
-      }
 
-      // 2. バックエンドから一括初期データを取得（原本HTMLキャッシュを含む）
-      callApiWithRetry('getInitialAppData', {}, function(initRes) {
-        if (initRes && initRes.success) {
-          if (initRes.targetDateSuffix) currentReportDateSuffix = initRes.targetDateSuffix;
-          currentComments = initRes.comments || [];
-          cachedReportHtmlContent = initRes.reportHtml || '';
-          checkAuthOnLoad(initRes.reportData?.data || initRes.reportData);
-        } else {
-          document.body.innerHTML = `<div style="color:#fff; text-align:center; padding:50px; font-family:sans-serif;">${t('reportNotFound')}</div>`;
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
         }
-      }, function(err) {
-        document.body.innerHTML = `<div style="color:#fff; text-align:center; padding:50px; font-family:sans-serif;">サーバーへの接続に失敗しました。<br><span style="font-size:12px;color:#aaa;">しばらくしてから再読み込みしてください。</span></div>`;
-      });
+
+        const profile = await liff.getProfile();
+        const lineUid = profile.userId;
+
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid || '')}`;
+        if (dateTarget) {
+          targetUrl += `&target=${encodeURIComponent(dateTarget)}`;
+        }
+
+        window.location.replace(targetUrl);
+      } catch (err) {
+        window.location.replace(baseUrl);
+      }
+    }
+
+    // 辞書オブジェクト
+    const texts = {
+      ja: {
+        pageTitle: "現在、利用できません",
+        title: "システムメンテナンス中",
+        desc: "現在、iOS 27対応に向けた<br>プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。"
+      },
+      en: {
+        pageTitle: "Service Unavailable",
+        title: "Under Scheduled Maintenance",
+        desc: "We are currently performing system updates<br>for iOS 27 support.<br><br>Maintenance is scheduled to finish around<br><strong>Sep 18 at 22:00</strong>.<br><br>We apologize for the inconvenience<br>and appreciate your patience."
+      }
     };
 
-    function initBirthDatePicker() {
-      const mSel = document.getElementById('nu-birth-month');
-      if (!mSel) return;
-      let defaultMText = '誕生月';
-      if (currentLang === 'en') defaultMText = 'Month';
-      if (currentLang === 'ko') defaultMText = '태어난 달';
-      mSel.innerHTML = `<option value="">${defaultMText}</option>`;
-      for (let i = 1; i <= 12; i++) {
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.innerText = currentLang === 'en' ? `Month ${i}` : `${i}月`;
-        mSel.appendChild(opt);
-      }
-      updateBirthDayOptions();
-    }
+    function switchLang(lang) {
+      if (isBypassing) return;
+      const data = texts[lang] || texts.ja;
+      document.documentElement.lang = lang;
+      document.getElementById('page-title').innerText = data.pageTitle;
+      document.getElementById('m-title').innerText = data.title;
+      document.getElementById('m-desc').innerHTML = data.desc;
 
-    function updateBirthDayOptions() {
-      const mSel = document.getElementById('nu-birth-month');
-      const dSel = document.getElementById('nu-birth-day');
-      if (!mSel || !dSel) return;
-      const month = parseInt(mSel.value, 10);
-      const currentSelectedDay = dSel.value;
-      let defaultDText = '日付';
-      if (currentLang === 'en') defaultDText = 'Day';
-      if (currentLang === 'ko') defaultDText = '날짜';
-      dSel.innerHTML = `<option value="">${defaultDText}</option>`;
-      if (!month) return;
-
-      let daysInMonth = 31;
-      if ([4, 6, 9, 11].includes(month)) daysInMonth = 30;
-      else if (month === 2) daysInMonth = 29;
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const opt = document.createElement('option');
-        opt.value = d;
-        opt.innerText = currentLang === 'en' ? `Day ${d}` : `${d}日`;
-        if (parseInt(currentSelectedDay, 10) === d) opt.selected = true;
-        dSel.appendChild(opt);
-      }
-    }
-
-    function checkAuthOnLoad(reportData) {
-      const loaderMsg = document.getElementById('loader-msg');
-      if (SERVER_LINE_UID) {
-        if (loaderMsg) loaderMsg.innerText = t('checkingLine');
-        callApiWithRetry('checkLineAuth', { lineUid: SERVER_LINE_UID }, function(res) {
-          if (res && res.success) {
-            localStorage.setItem(TOKEN_KEY, res.sessionToken);
-            currentUser = res;
-            if (res.lang) {
-              currentLang = res.lang;
-              localStorage.setItem(LANG_KEY, currentLang);
-            }
-            finishAuthLoad(reportData, true);
-          } else {
-            checkExistingToken(reportData, true);
-          }
-        }, function() {
-          checkExistingToken(reportData, false);
-        });
+      const btnJa = document.getElementById('btn-ja');
+      const btnEn = document.getElementById('btn-en');
+      if (lang === 'en') {
+        btnJa.classList.remove('active');
+        btnEn.classList.add('active');
       } else {
-        checkExistingToken(reportData, false);
+        btnJa.classList.add('active');
+        btnEn.classList.remove('active');
       }
-    }
-
-    function checkExistingToken(reportData, hasUnlinkedLineUid) {
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (token) {
-        callApiWithRetry('validateSession', { sessionToken: token }, function(res) {
-          if (res && res.valid) {
-            currentUser = res;
-            if (res.lang) {
-              currentLang = res.lang;
-              localStorage.setItem(LANG_KEY, currentLang);
-            }
-            if (hasUnlinkedLineUid && SERVER_LINE_UID) {
-              callApiWithRetry('linkLineUid', { sessionToken: token, lineUid: SERVER_LINE_UID }, function(linkRes) {
-                if (linkRes && linkRes.success) {
-                  currentUser.isLineLinked = true;
-                }
-              });
-            }
-            finishAuthLoad(reportData, false);
-          } else {
-            localStorage.removeItem(TOKEN_KEY);
-            currentUser = { userId: '', userName: '', avatarUrl: '', isGuest: false, isLineLinked: false, role: 'user', lang: currentLang, isTemporary: false, tempExpireEpoch: null, isImpersonated: false, originalRole: '' };
-            finishAuthLoad(reportData, false, hasUnlinkedLineUid);
-          }
-        }, function() {
-          finishAuthLoad(reportData, false, hasUnlinkedLineUid);
-        });
-      } else {
-        finishAuthLoad(reportData, false, hasUnlinkedLineUid);
-      }
-    }
-
-    function finishAuthLoad(reportData, isAutoLoginSuccess, promptLineLink = false) {
-      document.getElementById('today-loader').style.display = 'none';
-      renderView(reportData);
-      applyTranslations();
-      if (currentUser.avatarUrl) {
-        const av = document.getElementById('header-avatar');
-        if (av) {
-          av.src = currentUser.avatarUrl;
-          av.style.display = 'inline-block';
-        }
-      }
-      
-      updateImpersonationBanner();
-      updateTempAccountBanner();
-      applyGuestCommentRestrictions();
-      updateCommentUI();
-      if (currentUser.userId) {
-        checkUnreadInquiry();
-        checkPendingApprovals();
-        if (isAutoLoginSuccess) {
-          let lineLoginMsg = `LINE自動ログイン: ${currentUser.userName || currentUser.userId}`;
-          if (currentLang === 'en') lineLoginMsg = `LINE Auto-login: ${currentUser.userName || currentUser.userId}`;
-          if (currentLang === 'ko') lineLoginMsg = `LINE 자동 로그인: ${currentUser.userName || currentUser.userId}`;
-          showToast(lineLoginMsg, 'success');
-        }
-      } else {
-        setTimeout(() => {
-          handleTopButton(promptLineLink);
-        }, 300);
-      }
-    }
-
-    function updateImpersonationBanner() {
-      const banner = document.getElementById('impersonation-banner-bar');
-      const targetText = document.getElementById('impersonation-target-text');
-      if (!banner) return;
-      if (currentUser.isImpersonated) {
-        document.body.classList.add('impersonating');
-        banner.classList.add('active');
-        if (targetText) {
-          if (currentLang === 'en') targetText.innerText = `Browsing as ${currentUser.userName || currentUser.userId}`;
-          else if (currentLang === 'ko') targetText.innerText = `${currentUser.userName || currentUser.userId} 님으로 열람 중`;
-          else targetText.innerText = `${currentUser.userName || currentUser.userId} として閲覧中`;
-        }
-      } else {
-        document.body.classList.remove('impersonating');
-        banner.classList.remove('active');
-      }
-    }
-
-    function updateTempAccountBanner() {
-      const banner = document.getElementById('temp-account-banner-bar');
-      if (!banner) return;
-
-      clearInterval(countdownInterval);
-
-      if (currentUser.isTemporary && currentUser.tempExpireEpoch) {
-        document.body.classList.add('has-temp-banner');
-        banner.classList.add('active');
-        banner.innerHTML = `<span>${t('tempAccountBanner')}</span>`;
-
-        function checkExpiration() {
-          const now = new Date().getTime();
-          const diff = currentUser.tempExpireEpoch - now;
-          if (diff <= 0) {
-            clearInterval(countdownInterval);
-            banner.innerHTML = `<span style="color:#f87171;font-weight:700;">${t('tempExpiredBanner')}</span>`;
-            setTimeout(() => {
-              let expToast = 'このアカウントはご利用いただけません';
-              if (currentLang === 'en') expToast = 'This account is no longer valid';
-              if (currentLang === 'ko') expToast = '이 계정은 더 이상 이용하실 수 없습니다';
-              showToast(expToast, 'error');
-              executeLogout();
-            }, 1800);
-          }
-        }
-
-        checkExpiration();
-        countdownInterval = setInterval(checkExpiration, 60000);
-      } else {
-        document.body.classList.remove('has-temp-banner');
-        banner.classList.remove('active');
-      }
-    }
-
-    function applyGuestCommentRestrictions() {
-      const isGuestUser = (currentUser.userId === GUEST_ID || currentUser.isGuest);
-      const isTempUser = !!currentUser.isTemporary;
-      const chatToggleBtn = document.getElementById('chat-toggle-button');
-      const inquiryWrapper = document.getElementById('inquiry-btn-wrapper');
-      const loginBtn = document.getElementById('header-login-btn');
-      const loginText = document.getElementById('login-text');
-      
-      if (chatToggleBtn) {
-        if (isGuestUser || isTempUser) {
-          chatToggleBtn.style.display = 'none';
-          if (isChatOpen) toggleChat();
-        } else {
-          chatToggleBtn.style.display = 'flex';
-        }
-      }
-      if (inquiryWrapper) {
-        if (isTempUser) {
-          inquiryWrapper.style.display = 'none';
-          if (isInquiryOpen) closeInquiry();
-        } else {
-          inquiryWrapper.style.display = 'flex';
-        }
-      }
-
-      if (loginBtn && loginText) {
-        if (isGuestUser) {
-          loginBtn.classList.add('guest-mode');
-          loginText.innerText = t('inquiryOnly');
-        } else {
-          loginBtn.classList.remove('guest-mode');
-          loginText.innerText = currentUser.userName || currentUser.userId || t('login');
-        }
-      }
-    }
-
-    function checkPendingApprovals() {
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) return;
-      if (currentUser.isImpersonated || (currentUser.role !== '@owner' && currentUser.role !== '@admin')) {
-        pendingApprovalCount = 0;
-        updateApprovalBadgeDisplay();
-        return;
-      }
-
-      callApiWithRetry('getPendingTemporaryUsers', { sessionToken: token }, function(res) {
-        if (res && res.success) {
-          pendingApprovalCount = res.count || 0;
-          updateApprovalBadgeDisplay();
-        }
-      });
-    }
-
-    function updateApprovalBadgeDisplay() {
-      const headerBadge = document.getElementById('approval-header-badge');
-      const countEl = document.getElementById('pending-approval-count');
-      const approvalBtn = document.getElementById('pending-approval-btn');
-
-      const isManager = !currentUser.isImpersonated && (currentUser.role === '@owner' || currentUser.role === '@admin');
-
-      if (isManager && approvalBtn) {
-        approvalBtn.style.display = 'block';
-        if (countEl) countEl.innerText = pendingApprovalCount;
-      } else if (approvalBtn) {
-        approvalBtn.style.display = 'none';
-      }
-
-      if (headerBadge) {
-        if (isManager && pendingApprovalCount > 0) {
-          headerBadge.innerText = pendingApprovalCount;
-          headerBadge.style.display = 'block';
-        } else {
-          headerBadge.innerText = '0';
-          headerBadge.style.display = 'none';
-        }
-      }
-    }
-
-    function togglePasswordVisibility(inputId, btnEl) {
-      const inputEl = document.getElementById(inputId);
-      const pathEl = btnEl.querySelector('path');
-      if (!inputEl || !pathEl) return;
-      if (inputEl.type === 'password') {
-        inputEl.type = 'text';
-        pathEl.setAttribute('d', PATH_EYE_SLASH);
-        btnEl.setAttribute('title', currentLang === 'en' ? 'Hide password' : (currentLang === 'ko' ? '비밀번호 숨기기' : 'パスワードを隠す'));
-      } else {
-        inputEl.type = 'password';
-        pathEl.setAttribute('d', PATH_EYE_OPEN);
-        btnEl.setAttribute('title', currentLang === 'en' ? 'Show password' : (currentLang === 'ko' ? '비밀번호 표시' : 'パスワードを表示'));
-      }
-    }
-
-    // ==========================================
-    // ★ 独自ビューアー レンダリング処理
-    // ==========================================
-    function renderView(data) {
-      const match = (data && data.url) ? data.url.match(/\d{8}/) : null;
-      if (!currentReportDateSuffix) {
-        currentReportDateSuffix = match ? match[0] : new Date().toISOString().slice(0,10).replace(/-/g,'');
-      }
-      
-      const headerFormattedDate = formatReportHeaderDate(currentReportDateSuffix);
-      const viewerUrl = (data && data.url) ? data.url : '';
-
-      // ★ 独自ビューアー：キャッシュされた原本HTMLがある場合はiframeのsrcdocで完全インライン展開
-      let viewerContentHtml = '';
-      if (cachedReportHtmlContent && cachedReportHtmlContent.trim().length > 0) {
-        const sanitizedHtml = cachedReportHtmlContent
-          .replace(/"/g, '&quot;')
-          .replace(/<style>/i, '<style>html,body{background:#222;display:flex;flex-direction:column;align-items:center;padding:10px 0;margin:0;box-sizing:border-box;}body>div.title,body>div.grid-container,body>div.img-wrap{background:#fff;box-shadow:0 4px 15px rgba(0,0,0,0.5);border-radius:4px;padding:15px;box-sizing:border-box;}');
-
-        viewerContentHtml = `
-          <iframe class="custom-report-iframe" srcdoc="${sanitizedHtml}" allow="autoplay"></iframe>
-        `;
-      } else {
-        viewerContentHtml = `
-          <iframe class="pdf-fallback-frame" src="${viewerUrl}" allow="autoplay"></iframe>
-        `;
-      }
-
-      document.getElementById('app-container').innerHTML = `
-        <div id="today-header-bar">
-          <div class="header-title">${headerFormattedDate}</div>
-          <div class="header-right">
-            
-            <div id="inquiry-btn-wrapper" style="position: relative; display: flex; align-items: center;">
-              <button type="button" class="header-icon-btn inquiry-toggle-btn" id="inquiry-toggle-button" onclick="handleInquiryButtonClick()" title="お問い合わせ">
-                <svg class="inquiry-icon-open" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-                <svg class="inquiry-icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                <div class="chat-badge" id="inquiry-badge-count">0</div>
-              </button>
-              <div id="inquiry-tip-bubble" class="inquiry-bubble-tip" onclick="handleInquiryButtonClick()">
-                <span style="color:#b3e5fc; font-size:9px;">●</span> ${t('unreadTip')}
-              </div>
-            </div>
-
-            <button type="button" class="header-icon-btn chat-toggle-btn" id="chat-toggle-button" onclick="toggleChat()" title="コメントを開閉">
-              <svg class="chat-icon-open" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-              <svg class="chat-icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-              <div class="chat-badge" id="chat-badge-count">0</div>
-            </button>
-            <div class="login-btn-wrap">
-              <button type="button" class="login-btn" id="header-login-btn" onclick="handleTopButton()">
-                <img id="header-avatar" class="header-avatar" src="">
-                <span id="login-text">${t('login')}</span>
-              </button>
-              <div class="approval-header-badge" id="approval-header-badge">0</div>
-            </div>
-          </div>
-        </div>
-        <div class="chat-bg-overlay" id="chat-bg-overlay"></div>
-        <div id="story-bubbles-wrapper"></div>
-        <div id="chat-footer-bar">
-          <div class="chat-input-wrapper">
-            <textarea id="chat-main-input" class="chat-input" placeholder="${t('commentPlaceholder')}" rows="1" oninput="autoResizeTextarea(this)" onkeydown="handleCommentKeydown(event)"></textarea>
-          </div>
-          <button type="button" class="send-btn main-send-btn" onclick="sendUserComment(true)">
-            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-          </button>
-        </div>
-        <div id="inquiry-rooms-wrapper"></div>
-        <div id="inquiry-chat-wrapper"></div>
-        <div id="inquiry-footer-bar">
-          <div class="chat-input-wrapper">
-            <textarea id="inquiry-main-input" class="chat-input" placeholder="${t('inquiryPlaceholder')}" rows="1" oninput="autoResizeTextarea(this)"></textarea>
-          </div>
-          <button type="button" class="send-btn inquiry-send-btn" onclick="sendInquiryMessage()">
-            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-          </button>
-        </div>
-        <div class="viewer-container" id="viewer-container">
-          ${viewerContentHtml}
-        </div>
-      `;
-      updateImpersonationBanner();
-      updateTempAccountBanner();
-      applyGuestCommentRestrictions();
-      updateCommentUI();
-      fetchComments();
-    }
-
-    function autoResizeTextarea(el) {
-      el.style.height = 'auto';
-      el.style.height = (el.scrollHeight) + 'px';
-    }
-
-    function fetchComments() {
-      callApiWithRetry('getUserComments', { targetDateSuffix: currentReportDateSuffix }, function(res) {
-        if (res && res.success) {
-          currentComments = res.comments || [];
-          updateCommentUI();
-        }
-      });
-    }
-
-    function updateCommentUI(forceScrollBottom = false) {
-      const count = currentComments ? currentComments.length : 0;
-      const badge = document.getElementById('chat-badge-count');
-      if (badge) {
-        if (count > 0) {
-          badge.innerText = count;
-          badge.style.display = 'block';
-        } else {
-          badge.style.display = 'none';
-        }
-      }
-      const bubblesWrapper = document.getElementById('story-bubbles-wrapper');
-      if (!bubblesWrapper) return;
-      const currentScrollTop = bubblesWrapper.scrollTop;
-      if (count === 0) {
-        bubblesWrapper.innerHTML = `
-          <div class="story-bubble-card">
-            <div style="font-size:12.5px; color:#777; text-align:center; padding:2px 0;">${t('noComments')}</div>
-          </div>
-        `;
-        return;
-      }
-      try {
-        bubblesWrapper.innerHTML = currentComments.map((c) => {
-          let anonText = '名無し';
-          if (currentLang === 'en') anonText = 'Anonymous';
-          if (currentLang === 'ko') anonText = '익명';
-          const uName = escapeHtml(c.userName || c.userId || anonText);
-          const cText = autoLinkText(c.commentText || '');
-          const avImg = c.avatarUrl ? `<img src="${c.avatarUrl}" class="comment-avatar">` : `<svg style="width:22px; height:22px; fill:#94a3b8; flex-shrink:0;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
-          const isMyComment = (currentUser.userId && String(c.userId) === String(currentUser.userId));
-          const cardClass = isMyComment ? 'story-bubble-card my-comment' : 'story-bubble-card';
-          const rRowId = `reactions-row-${c.rowIndex || Math.random()}`;
-          let reactionsHtml = '';
-          if (c.reactions) {
-            const rTypes = ['👍', '❤️', '✨', '🔥', '👏'];
-            let badges = [];
-            rTypes.forEach(rt => {
-              const userList = c.reactions[rt] || [];
-              const count = userList.length;
-              if (count > 0) {
-                const hasReacted = currentUser.userId && userList.includes(currentUser.userId);
-                const reactedClass = hasReacted ? 'reaction-badge reacted' : 'reaction-badge';
-                badges.push(`<span class="${reactedClass}" onclick="toggleReaction(${c.rowIndex}, '${rt}')">${rt} ${count}</span>`);
-              }
-            });
-            reactionsHtml = `<div class="reactions-display-row" id="${rRowId}">${badges.join('')}</div>`;
-          }
-          return `
-            <div class="${cardClass}" data-rowindex="${c.rowIndex || ''}" oncontextmenu="handleCardContext(event, ${c.rowIndex})" ontouchstart="handleCardTouchStart(event, ${c.rowIndex})" ontouchmove="handleCardTouchMove(event)" ontouchend="handleCardTouchEnd(event)">
-              <div class="comment-header-row">
-                ${avImg}
-                <div class="comment-author">${uName}</div>
-              </div>
-              <div class="comment-content">${cText}</div>
-              ${reactionsHtml}
-            </div>
-          `;
-        }).join('');
-        setTimeout(() => {
-          if (forceScrollBottom) {
-            bubblesWrapper.scrollTop = bubblesWrapper.scrollHeight;
-          } else {
-            bubblesWrapper.scrollTop = currentScrollTop;
-          }
-        }, 50);
-      } catch (err) {
-        bubblesWrapper.innerHTML = `<div class="story-bubble-card"><div style="font-size:12.5px; color:#e53935; text-align:center;">${t('commentDisplayErr')}</div></div>`;
-      }
-    }
-
-    let touchTimer = null;
-    let lastTouchY = 0;
-    let lastTouchX = 0;
-    function handleCardTouchStart(e, rowIndex) {
-      if (!rowIndex) return;
-      if (currentUser.userId === GUEST_ID || currentUser.isGuest) return;
-      if (e.touches && e.touches.length > 0) {
-        lastTouchX = e.touches[0].clientX;
-        lastTouchY = e.touches[0].clientY;
-      }
-      clearTimeout(touchTimer);
-      touchTimer = setTimeout(() => {
-        openReactionMenu(rowIndex, lastTouchY, lastTouchX);
-      }, 600);
-    }
-    function handleCardTouchMove(e) { clearTimeout(touchTimer); }
-    function handleCardTouchEnd(e) { clearTimeout(touchTimer); }
-    function handleCardContext(e, rowIndex) {
-      if (!rowIndex) return;
-      if (currentUser.userId === GUEST_ID || currentUser.isGuest) return;
-      e.preventDefault();
-      lastTouchX = e.clientX;
-      lastTouchY = e.clientY;
-      openReactionMenu(rowIndex, lastTouchY, lastTouchX);
-    }
-    function closeAllReactionMenus() {
-      document.querySelectorAll('.reaction-popup-menu').forEach(el => el.remove());
-      const wrapper = document.getElementById('story-bubbles-wrapper');
-      if (wrapper) {
-        wrapper.classList.remove('reaction-mode');
-        wrapper.querySelectorAll('.reaction-target').forEach(el => el.classList.remove('reaction-target'));
-      }
-      activeReactionMenuRow = null;
-    }
-    function openReactionMenu(rowIndex, clientY, clientX) {
-      closeAllReactionMenus();
-      if (currentUser.userId === GUEST_ID || currentUser.isGuest) return;
-      activeReactionMenuRow = rowIndex;
-      const cardEl = document.querySelector(`.story-bubble-card[data-rowindex="${rowIndex}"]`);
-      if (!cardEl) return;
-      const wrapper = document.getElementById('story-bubbles-wrapper');
-      wrapper.classList.add('reaction-mode');
-      cardEl.classList.add('reaction-target');
-      const menu = document.createElement('div');
-      menu.className = 'reaction-popup-menu';
-      const emojis = ['👍', '❤️', '✨', '🔥', '👏'];
-      
-      menu.innerHTML = emojis.map(em => `
-        <span class="reaction-popup-item" onclick="sendReaction(${rowIndex}, '${em}')">${em}</span>
-      `).join('');
-      document.body.appendChild(menu);
-      const menuWidth = 230;
-      const menuHeight = 50;
-      let topPos = (clientY || window.innerHeight / 2) - menuHeight - 15;
-      if (topPos < 80) topPos = clientY + 25;
-      let leftPos = (clientX || window.innerWidth / 2) - (menuWidth / 2);
-      if (leftPos < 10) leftPos = 10;
-      if (leftPos + menuWidth > window.innerWidth - 10) leftPos = window.innerWidth - menuWidth - 10;
-      menu.style.top = topPos + 'px';
-      menu.style.left = leftPos + 'px';
-    }
-    function sendReaction(rowIndex, reactionType) {
-      closeAllReactionMenus();
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) {
-        let errToast = 'リアクションするにはログインが必要です';
-        if (currentLang === 'en') errToast = 'Login is required to react';
-        if (currentLang === 'ko') errToast = '리액션을 하려면 로그인이 필요합니다';
-        showToast(errToast, 'error');
-        handleTopButton();
-        return;
-      }
-      if (currentUser.userId === GUEST_ID || currentUser.isGuest) {
-        let errToast = '共有アカウントからはリアクションできません';
-        if (currentLang === 'en') errToast = 'Cannot react from shared account';
-        if (currentLang === 'ko') errToast = '공용 계정에서는 리액션할 수 없습니다';
-        showToast(errToast, 'error');
-        return;
-      }
-      if (!currentUser.userId) {
-        let errToast = 'ユーザー情報の読み込み中です';
-        if (currentLang === 'en') errToast = 'Loading user info...';
-        if (currentLang === 'ko') errToast = '사용자 정보를 불러오는 중입니다';
-        showToast(errToast, 'error');
-        return;
-      }
-      const targetComment = currentComments.find(c => c.rowIndex === rowIndex);
-      if (targetComment) {
-        if (!targetComment.reactions) {
-          targetComment.reactions = { '👍': [], '❤️': [], '✨': [], '🔥': [], '👏': [] };
-        }
-        let userList = targetComment.reactions[reactionType] || [];
-        const userIndex = userList.indexOf(currentUser.userId);
-        if (userIndex > -1) {
-          userList.splice(userIndex, 1);
-        } else {
-          userList.push(currentUser.userId);
-        }
-        targetComment.reactions[reactionType] = userList;
-        updateCommentUI();
-      }
-      callApiWithRetry('postReaction', { sessionToken: token, rowIndex: rowIndex, reactionType: reactionType }, function(res) {
-        if (res && res.success) {
-          currentComments = res.comments || [];
-          updateCommentUI();
-        } else {
-          let errToast = 'リアクションに失敗しました';
-          if (currentLang === 'en') errToast = 'Failed to react';
-          if (currentLang === 'ko') errToast = '리액션 등록에 실패했습니다';
-          showToast(res.message || errToast, 'error');
-          fetchComments();
-        }
-      });
-    }
-    function toggleReaction(rowIndex, reactionType) {
-      sendReaction(rowIndex, reactionType);
-    }
-    function toggleChat() {
-      if (isInquiryOpen) closeInquiry();
-      isChatOpen = !isChatOpen;
-      const btn = document.getElementById('chat-toggle-button');
-      const wrapper = document.getElementById('story-bubbles-wrapper');
-      const footer = document.getElementById('chat-footer-bar');
-      const bgOverlay = document.getElementById('chat-bg-overlay');
-      if (isChatOpen) {
-        if (btn) btn.classList.add('active');
-        if (wrapper) wrapper.classList.add('active');
-        if (footer) footer.classList.add('active');
-        if (bgOverlay) bgOverlay.classList.add('active');
-        setTimeout(() => {
-          if (wrapper) wrapper.scrollTop = wrapper.scrollHeight;
-        }, 50);
-      } else {
-        if (btn) btn.classList.remove('active');
-        if (wrapper) wrapper.classList.remove('active');
-        if (footer) footer.classList.remove('active');
-        if (bgOverlay) bgOverlay.classList.remove('active');
-      }
-    }
-    function sendUserComment(isModal) {
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) {
-        let errToast = 'コメントするにはログインが必要です';
-        if (currentLang === 'en') errToast = 'Login is required to comment';
-        if (currentLang === 'ko') errToast = '코멘트를 작성하려면 로그인이 필요합니다';
-        showToast(errToast, 'error');
-        handleTopButton();
-        return;
-      }
-      if (currentUser.userId === GUEST_ID || currentUser.isGuest) {
-        let errToast = '共有アカウントからはコメントできません';
-        if (currentLang === 'en') errToast = 'Cannot comment from shared account';
-        if (currentLang === 'ko') errToast = '공용 계정에서는 코멘트를 작성할 수 없습니다';
-        showToast(errToast, 'error');
-        return;
-      }
-      const inputEl = document.getElementById('chat-main-input');
-      const text = inputEl ? inputEl.value.trim() : '';
-      if (!text) return;
-      const sendBtn = document.querySelector('.main-send-btn');
-      if (sendBtn) {
-        sendBtn.classList.add('sending');
-        sendBtn.disabled = true;
-      }
-      callApiWithRetry('postUserComment', { sessionToken: token, commentText: text, targetDateSuffix: currentReportDateSuffix }, function(res) {
-        if (res && res.success) {
-          if (inputEl) {
-            inputEl.value = '';
-            inputEl.style.height = 'auto';
-          }
-          if (sendBtn) {
-            sendBtn.classList.remove('sending');
-            sendBtn.classList.add('success');
-            sendBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
-          }
-          showToast(t('commentPosted'), 'success');
-          currentComments.push({
-            timestamp: t('justNow'),
-            userId: currentUser.userId || '',
-            userName: currentUser.userName || t('you'),
-            avatarUrl: currentUser.avatarUrl || '',
-            commentText: text,
-            reactions: { '👍': [], '❤️': [], '✨': [], '🔥': [], '👏': [] }
-          });
-          
-          updateCommentUI(true);
-          fetchComments();
-          setTimeout(() => {
-            if (sendBtn) {
-              sendBtn.classList.remove('success');
-              sendBtn.disabled = false;
-              sendBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>`;
-            }
-          }, 1200);
-        } else {
-          if (sendBtn) {
-            sendBtn.classList.remove('sending');
-            sendBtn.disabled = false;
-          }
-          let errToast = '投稿に失敗しました';
-          if (currentLang === 'en') errToast = 'Failed to post comment';
-          if (currentLang === 'ko') errToast = '등록에 실패했습니다';
-          showToast(res.message || errToast, 'error');
-        }
-      });
-    }
-    function handleCommentKeydown(e) {
-      if (e.key === 'Enter' && !e.shiftKey) return;
-    }
-    function checkUnreadInquiry() {
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) return;
-      callApiWithRetry('getUnreadInquiryCount', { sessionToken: token }, function(res) {
-        if (res && res.success) {
-          unreadInquiryCount = res.count || 0;
-          updateUnreadNotificationDisplay();
-        }
-      });
-    }
-
-    function updateUnreadNotificationDisplay() {
-      const badge = document.getElementById('inquiry-badge-count');
-      const tip = document.getElementById('inquiry-tip-bubble');
-
-      if (unreadInquiryCount > 0) {
-        if (badge) {
-          badge.innerText = unreadInquiryCount;
-          badge.style.display = 'block';
-        }
-        if (tip && !isInquiryOpen) {
-          tip.style.display = 'flex';
-        }
-      } else {
-        if (badge) badge.style.display = 'none';
-        if (tip) tip.style.display = 'none';
-      }
-    }
-
-    function handleInquiryButtonClick() {
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) {
-        let errToast = 'お問い合わせにはログインが必要です';
-        if (currentLang === 'en') errToast = 'Login is required to open messages';
-        if (currentLang === 'ko') errToast = '문의 기능을 이용하려면 로그인이 필요합니다';
-        showToast(errToast, 'error');
-        handleTopButton();
-        return;
-      }
-      if (isInquiryOpen) {
-        closeInquiry();
-        return;
-      }
-      const isOwner = (currentUser.role === '@owner');
-      if (!isOwner && unreadInquiryCount > 0) {
-        openUnreadConfirm();
-      } else {
-        openInquiry();
-      }
-    }
-    function openUnreadConfirm() {
-      document.body.classList.add('confirm-open');
-      document.getElementById('inquiry-unread-overlay').classList.add('active');
-      document.getElementById('inquiry-unread-dialog').classList.add('active');
-    }
-    function closeUnreadConfirm() {
-      document.body.classList.remove('confirm-open');
-      document.getElementById('inquiry-unread-overlay').classList.remove('active');
-      document.getElementById('inquiry-unread-dialog').classList.remove('active');
-    }
-    function confirmOpenUnreadInquiry() {
-      closeUnreadConfirm();
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (token) {
-        callApiWithRetry('markInquiryAsRead', { sessionToken: token, targetUserId: currentUser.userId }, function() {
-          unreadInquiryCount = 0;
-          updateUnreadNotificationDisplay();
-        });
-      }
-      openInquiry();
-    }
-    function toggleInquiry() {
-      handleInquiryButtonClick();
-    }
-    function openInquiry() {
-      if (isChatOpen) toggleChat();
-      const tip = document.getElementById('inquiry-tip-bubble');
-      if (tip) tip.style.display = 'none';
-
-      isInquiryOpen = true;
-      const btn = document.getElementById('inquiry-toggle-button');
-      if (btn) btn.classList.add('active');
-      const bgOverlay = document.getElementById('chat-bg-overlay');
-      if (bgOverlay) bgOverlay.classList.add('active');
-      
-      const isOwner = (currentUser.role === '@owner');
-      if (isOwner) {
-        openInquiryRoomsList();
-      } else {
-        currentInquiryTargetUserId = currentUser.userId;
-        openInquiryChat(currentUser.userId);
-      }
-    }
-    function closeInquiry() {
-      isInquiryOpen = false;
-      const btn = document.getElementById('inquiry-toggle-button');
-      if (btn) btn.classList.remove('active');
-      const roomsWrapper = document.getElementById('inquiry-rooms-wrapper');
-      if (roomsWrapper) roomsWrapper.classList.remove('active');
-      const chatWrapper = document.getElementById('inquiry-chat-wrapper');
-      if (chatWrapper) chatWrapper.classList.remove('active');
-      const footer = document.getElementById('inquiry-footer-bar');
-      if (footer) footer.classList.remove('active');
-      const bgOverlay = document.getElementById('chat-bg-overlay');
-      if (bgOverlay && !isChatOpen) bgOverlay.classList.remove('active');
-      currentInquiryTargetUserId = '';
-      currentInquiryPartnerObj = null;
-      updateUnreadNotificationDisplay();
-    }
-    function openInquiryRoomsList() {
-      const chatWrapper = document.getElementById('inquiry-chat-wrapper');
-      if (chatWrapper) chatWrapper.classList.remove('active');
-      const footer = document.getElementById('inquiry-footer-bar');
-      if (footer) footer.classList.remove('active');
-      const roomsWrapper = document.getElementById('inquiry-rooms-wrapper');
-      if (roomsWrapper) {
-        roomsWrapper.classList.add('active');
-        roomsWrapper.innerHTML = `
-          <div style="text-align:center; color:#aaa; font-size:13px; padding:30px 0;">
-            ${t('inquiryLoadingRooms')}<span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
-          </div>
-        `;
-      }
-      const token = localStorage.getItem(TOKEN_KEY);
-      callApiWithRetry('getInquiryRooms', { sessionToken: token }, 
-        function(res) {
-          if (res && res.success) {
-            inquiryRooms = res.rooms || [];
-            renderInquiryRooms();
-            checkUnreadInquiry();
-          } else {
-            const errDetail = res ? (res.message || 'データ構造エラー') : '応答がありません';
-            if (roomsWrapper) roomsWrapper.innerHTML = `<div style="color:#e53935; text-align:center; padding:20px; font-size:12.5px;">一覧取得に失敗しました<br><span style="font-size:11px;color:#aaa;">(${escapeHtml(errDetail)})</span></div>`;
-          }
-        },
-        function(err) {
-          const errMsg = err && err.message ? err.message : JSON.stringify(err);
-          if (roomsWrapper) roomsWrapper.innerHTML = `<div style="color:#e53935; text-align:center; padding:20px; font-size:12.5px;">通信エラーが発生しました<br><span style="font-size:11px;color:#aaa;">(${escapeHtml(errMsg)})</span></div>`;
-        }
-      );
-    }
-
-    function renderInquiryRooms() {
-      const roomsWrapper = document.getElementById('inquiry-rooms-wrapper');
-      if (!roomsWrapper) return;
-      if (!inquiryRooms || inquiryRooms.length === 0) {
-        roomsWrapper.innerHTML = `<div style="color:#aaa; text-align:center; padding:30px 0; font-size:13px;">${t('inquiryNoUsers')}</div>`;
-        return;
-      }
-
-      roomsWrapper.innerHTML = inquiryRooms.map(r => {
-        let anonText = '名無し';
-        if (currentLang === 'en') anonText = 'Anonymous';
-        if (currentLang === 'ko') anonText = '익명';
-        const uName = escapeHtml(r.userName || r.userId || anonText);
-        const lastMsg = escapeHtml(r.lastMessage || '');
-        const avImg = r.avatarUrl ? `<img src="${r.avatarUrl}" class="inquiry-room-avatar">` : `<div class="inquiry-room-avatar" style="display:flex;align-items:center;justify-content:center;"><svg style="width:24px;height:24px;fill:#666;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>`;
-        const unreadBadge = (r.unreadCount > 0) ? `<div class="inquiry-room-badge">${r.unreadCount}</div>` : '';
-
-        return `
-          <div class="inquiry-room-card" onclick="selectInquiryRoom('${escapeHtml(r.userId)}')">
-            <div class="inquiry-room-avatar-wrap">
-              ${avImg}
-            </div>
-            <div class="inquiry-room-info">
-              <div class="inquiry-room-name">${uName}</div>
-              <div class="inquiry-room-lastmsg">${lastMsg}</div>
-            </div>
-            ${unreadBadge}
-          </div>
-        `;
-      }).join('');
-    }
-
-    function selectInquiryRoom(userId) {
-      currentInquiryTargetUserId = userId;
-      currentInquiryPartnerObj = inquiryRooms.find(r => r.userId === userId) || null;
-      const roomsWrapper = document.getElementById('inquiry-rooms-wrapper');
-      if (roomsWrapper) roomsWrapper.classList.remove('active');
-      
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (token) {
-        callApiWithRetry('markInquiryAsRead', { sessionToken: token, targetUserId: userId }, function() {
-          checkUnreadInquiry();
-        });
-      }
-      openInquiryChat(userId);
-    }
-
-    function openInquiryChat(targetUserId) {
-      const chatWrapper = document.getElementById('inquiry-chat-wrapper');
-      const footer = document.getElementById('inquiry-footer-bar');
-      if (chatWrapper) {
-        chatWrapper.classList.add('active');
-        chatWrapper.innerHTML = `
-          <div style="text-align:center; color:#aaa; font-size:13px; padding:30px 0;">
-            ${t('inquiryLoadingMsgs')}<span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
-          </div>
-        `;
-      }
-      if (footer) footer.classList.add('active');
-      fetchInquiryMessages(targetUserId, true);
-    }
-
-    function fetchInquiryMessages(targetUserId, scrollToBottom = false) {
-      const token = localStorage.getItem(TOKEN_KEY);
-      callApiWithRetry('getInquiryMessages', { sessionToken: token, targetUserId: targetUserId }, function(res) {
-        if (res && res.success) {
-          inquiryMessages = res.messages || [];
-          currentInquiryPartnerObj = res.partner;
-          renderInquiryMessages(res.partner, res.isStaffOrOwner, res.role, scrollToBottom);
-        } else {
-          let errToast = 'メッセージの取得に失敗しました';
-          if (currentLang === 'en') errToast = 'Failed to fetch messages';
-          if (currentLang === 'ko') errToast = '메시지를 불러오지 못했습니다';
-          showToast(res.message || errToast, 'error');
-        }
-      });
-    }
-
-    function renderInquiryMessages(partner, isStaffOrOwner, role, scrollToBottom = false) {
-      const chatWrapper = document.getElementById('inquiry-chat-wrapper');
-      if (!chatWrapper) return;
-      let bannerHtml = '';
-
-      if (isStaffOrOwner) {
-        let defaultPartner = '相手';
-        if (currentLang === 'en') defaultPartner = 'User';
-        if (currentLang === 'ko') defaultPartner = '상대방';
-        const pName = escapeHtml(partner ? (partner.userName || partner.userId || defaultPartner) : defaultPartner);
-        const pAvImg = partner && partner.avatarUrl ? `<img src="${partner.avatarUrl}" class="inquiry-partner-avatar">` : `<div class="inquiry-partner-avatar" style="display:flex;align-items:center;justify-content:center;"><svg style="width:18px;height:18px;fill:#888;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>`;
-        
-        const isOwner = (role === '@owner' || currentUser.role === '@owner');
-        const canImpersonate = isOwner && (partner && partner.role !== '@owner');
-        const impBtnHtml = canImpersonate ? `<button type="button" class="inquiry-impersonate-btn" onclick="openImpersonateConfirm('${partner.userId}', '${pName}')">${t('impersonateBtn')}</button>` : '';
-
-        bannerHtml = `
-          <div class="inquiry-partner-banner">
-            <div class="inquiry-partner-left">
-              ${pAvImg}
-              <div class="inquiry-partner-name">${pName}</div>
-            </div>
-            <div class="inquiry-partner-right">
-              ${impBtnHtml}
-              <button type="button" class="inquiry-back-btn" onclick="openInquiryRoomsList()">${t('chatListBtn')}</button>
-            </div>
-          </div>
-        `;
-      } else {
-        bannerHtml = `
-          <div class="inquiry-partner-banner" style="justify-content:center; text-align:center; padding:9px 12px;">
-            <div style="font-size:12.5px; font-weight:700; color:#b3e5fc; letter-spacing:0.2px;">
-              ${t('inquiryHeaderAdmin')}
-            </div>
-          </div>
-        `;
-      }
-
-      let msgsHtml = '';
-      if (!inquiryMessages || inquiryMessages.length === 0) {
-        msgsHtml = `
-          <div class="story-bubble-card">
-            <div style="font-size:12.5px; color:#777; text-align:center; padding:2px 0;">${t('inquiryNoMsgs')}</div>
-          </div>
-        `;
-      } else {
-        msgsHtml = inquiryMessages.map(m => {
-          let anonText = '名無し';
-          if (currentLang === 'en') anonText = 'Anonymous';
-          if (currentLang === 'ko') anonText = '익명';
-          const uName = escapeHtml(m.senderName || m.senderId || anonText);
-          const mText = autoLinkText(m.messageText || '');
-          const avImg = m.avatarUrl ? `<img src="${m.avatarUrl}" class="comment-avatar">` : `<svg style="width:22px; height:22px; fill:#94a3b8; flex-shrink:0;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
-          const isMe = (currentUser.userId && String(m.senderId) === String(currentUser.userId));
-          const cardClass = isMe ? 'story-bubble-card my-inquiry-msg' : 'story-bubble-card';
-          return `
-            <div class="${cardClass}">
-              <div class="comment-header-row">
-                ${avImg}
-                <div class="comment-author">${uName}</div>
-              </div>
-              <div class="comment-content">${mText}</div>
-            </div>
-          `;
-        }).join('');
-      }
-      chatWrapper.innerHTML = bannerHtml + msgsHtml;
-      if (scrollToBottom) {
-        setTimeout(() => {
-          chatWrapper.scrollTop = chatWrapper.scrollHeight;
-        }, 50);
-      }
-    }
-
-    function openPendingApprovalModal() {
-      closeModal();
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) return;
-
-      const overlay = document.getElementById('modal-overlay');
-      const dialog = document.getElementById('approval-list-dialog');
-      const content = document.getElementById('approval-list-content');
-
-      overlay.classList.add('active');
-      dialog.classList.add('active');
-      let loadingListText = '仮登録一覧を取得中';
-      if (currentLang === 'en') loadingListText = 'Loading pending registrations...';
-      if (currentLang === 'ko') loadingListText = '승인 대기 목록을 불러오는 중입니다...';
-      content.innerHTML = `<div style="text-align:center; color:#888; font-size:13px; padding:30px 0;">${loadingListText}<span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span></div>`;
-
-      callApiWithRetry('getPendingTemporaryUsers', { sessionToken: token }, function(res) {
-        if (res && res.success) {
-          const list = res.pendingUsers || [];
-          pendingApprovalCount = list.length;
-          updateApprovalBadgeDisplay();
-
-          if (list.length === 0) {
-            content.innerHTML = `<div style="text-align:center; color:#888; font-size:13px; padding:40px 0;">${t('approvalEmpty')}</div>`;
-            return;
-          }
-
-          content.innerHTML = list.map(u => {
-            let passLbl = 'パスワード：';
-            let expLbl = '承認期限：';
-            if (currentLang === 'en') { passLbl = 'Password:'; expLbl = 'Expires in:'; }
-            if (currentLang === 'ko') { passLbl = '비밀번호:'; expLbl = '승인 기한:'; }
-
-            return `
-              <div class="pending-user-card">
-                <div class="pending-card-header">
-                  <div class="pending-card-name">${escapeHtml(u.userName)}</div>
-                  <div class="pending-card-time">${escapeHtml(u.registeredAt)}</div>
-                </div>
-                <div class="pending-card-row">
-                  <span>${t('lblUserId')}</span>
-                  <span class="val">${escapeHtml(u.userId)}</span>
-                </div>
-                <div class="pending-card-row">
-                  <span>${passLbl}</span>
-                  <span class="val">${escapeHtml(u.password)}</span>
-                </div>
-                <div class="pending-card-row">
-                  <span>${expLbl}</span>
-                  <span class="val">${t('hoursLeft', u.hoursLeft)}</span>
-                </div>
-                <button type="button" class="pending-approve-action-btn" onclick="openApproveConfirm('${escapeHtml(u.userId)}', '${escapeHtml(u.userName)}')">
-                  ${t('approveBtn')}
-                </button>
-              </div>
-            `;
-          }).join('');
-        } else {
-          content.innerHTML = `<div style="color:#e53935; text-align:center; padding:20px; font-size:13px;">${res.message || '取得に失敗しました'}</div>`;
-        }
-      });
-    }
-
-    function closeApprovalListModal() {
-      document.getElementById('approval-list-dialog').classList.remove('active');
-      document.getElementById('modal-overlay').classList.remove('active');
-    }
-
-    function openApproveConfirm(targetId, targetName) {
-      pendingApproveTargetId = targetId;
-      pendingApproveTargetName = targetName;
-
-      const desc = document.getElementById('approve-confirm-desc');
-      if (desc) {
-        if (currentLang === 'en') {
-          desc.innerHTML = `Approve registration for <strong>${escapeHtml(targetName)}</strong> (${escapeHtml(targetId)})?<br><span style="font-size:11px;color:#888;">Credentials will be sent to the user.</span>`;
-        } else if (currentLang === 'ko') {
-          desc.innerHTML = `<strong>${escapeHtml(targetName)}</strong>(${escapeHtml(targetId)}) 님의<br>정식 등록을 승인하시겠습니까?<br><span style="font-size:11px;color:#888;">※완료 알림 및 초기 로그인 정보가 발송됩니다.</span>`;
-        } else {
-          desc.innerHTML = `<strong>${escapeHtml(targetName)}</strong>（${escapeHtml(targetId)}）さんの<br>登録を承認しますか？<br><span style="font-size:11px;color:#888;">※登録完了通知とID/PASSなどの<br>初期情報が送信されます。</span>`;
-        }
-      }
-      document.body.classList.add('confirm-open');
-      document.getElementById('approve-confirm-overlay').classList.add('active');
-      document.getElementById('approve-confirm-dialog').classList.add('active');
-    }
-
-    function closeApproveConfirm() {
-      pendingApproveTargetId = '';
-      pendingApproveTargetName = '';
-      document.body.classList.remove('confirm-open');
-      document.getElementById('approve-confirm-overlay').classList.remove('active');
-      document.getElementById('approve-confirm-dialog').classList.remove('active');
-    }
-
-    function executeApproveUser() {
-      const targetId = pendingApproveTargetId;
-      const targetName = pendingApproveTargetName;
-      closeApproveConfirm();
-      if (!targetId) return;
-
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) return;
-
-      let procMsg = '承認処理を実行中...';
-      if (currentLang === 'en') procMsg = 'Processing approval...';
-      if (currentLang === 'ko') procMsg = '승인 처리 진행 중...';
-      showToast(procMsg, 'loading');
-      callApiWithRetry('approveTemporaryUser', { sessionToken: token, targetUserId: targetId }, function(res) {
-        if (res && res.success) {
-          let succMsg = `${targetName} さんの承認が完了しました`;
-          if (currentLang === 'en') succMsg = `${targetName} approved successfully`;
-          if (currentLang === 'ko') succMsg = `${targetName} 님의 승인이 완료되었습니다`;
-          showToast(succMsg, 'success');
-          openPendingApprovalModal();
-        } else {
-          let failMsg = '承認に失敗しました';
-          if (currentLang === 'en') failMsg = 'Approval failed';
-          if (currentLang === 'ko') failMsg = '승인에 실패했습니다';
-          showToast(res.message || failMsg, 'error');
-        }
-      });
-    }
-
-    function openImpersonateConfirm(targetId, targetName) {
-      pendingImpersonateTargetId = targetId;
-      const desc = document.getElementById('impersonate-confirm-desc');
-      if (desc) {
-        if (currentLang === 'en') {
-          desc.innerHTML = `Browse as <strong>${escapeHtml(targetName)}</strong>?<br><span style="font-size:11px;color:#888;">You can switch back to Admin anytime from the top bar.</span>`;
-        } else if (currentLang === 'ko') {
-          desc.innerHTML = `<strong>${escapeHtml(targetName)}</strong> 님으로 대리 로그인하시겠습니까?<br><span style="font-size:11px;color:#888;">상단 바에서 언제든지 관리자로 복귀할 수 있습니다.</span>`;
-        } else {
-          desc.innerHTML = `<strong>${escapeHtml(targetName)}</strong> としてログインしますか？<br><span style="font-size:11px;color:#888;">画面最上部の「管理者に戻る」からいつでも復帰できます。</span>`;
-        }
-      }
-      document.body.classList.add('confirm-open');
-      document.getElementById('impersonate-confirm-overlay').classList.add('active');
-      document.getElementById('impersonate-confirm-dialog').classList.add('active');
-    }
-    function closeImpersonateConfirm() {
-      pendingImpersonateTargetId = '';
-      document.body.classList.remove('confirm-open');
-      document.getElementById('impersonate-confirm-overlay').classList.remove('active');
-      document.getElementById('impersonate-confirm-dialog').classList.remove('active');
-    }
-    function executeImpersonate() {
-      const targetId = pendingImpersonateTargetId;
-      closeImpersonateConfirm();
-      if (!targetId) return;
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) return;
-      let loadMsg = 'アカウントを切り替え中...';
-      if (currentLang === 'en') loadMsg = 'Switching account...';
-      if (currentLang === 'ko') loadMsg = '계정 전환 중...';
-      showToast(loadMsg, 'loading');
-      callApiWithRetry('impersonateUser', { sessionToken: token, targetUserId: targetId }, function(res) {
-        if (res && res.success) {
-          localStorage.setItem(TOKEN_KEY, res.sessionToken);
-          currentUser = res;
-          if (res.lang) {
-            currentLang = res.lang;
-            localStorage.setItem(LANG_KEY, currentLang);
-            applyTranslations();
-          }
-          closeInquiry();
-          if (res.avatarUrl) {
-            const av = document.getElementById('header-avatar');
-            if (av) { av.src = res.avatarUrl; av.style.display = 'inline-block'; }
-          } else {
-            const av = document.getElementById('header-avatar');
-            if (av) { av.src = ''; av.style.display = 'none'; }
-          }
-          updateImpersonationBanner();
-          updateTempAccountBanner();
-          applyGuestCommentRestrictions();
-          updateCommentUI();
-          checkUnreadInquiry();
-          checkPendingApprovals();
-          let succMsg = `${res.userName || res.userId} としてログインしました`;
-          if (currentLang === 'en') succMsg = `Browsing as ${res.userName || res.userId}`;
-          if (currentLang === 'ko') succMsg = `${res.userName || res.userId} 님으로 로그인했습니다`;
-          showToast(succMsg, 'success');
-        } else {
-          let failMsg = 'アカウントの切り替えに失敗しました';
-          if (currentLang === 'en') failMsg = 'Account switch failed';
-          if (currentLang === 'ko') failMsg = '계정 전환에 실패했습니다';
-          showToast(failMsg, 'error');
-        }
-      });
-    }
-    function executeRevertImpersonation() {
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) return;
-      let loadMsg = '管理者アカウントに復帰中...';
-      if (currentLang === 'en') loadMsg = 'Reverting to admin account...';
-      if (currentLang === 'ko') loadMsg = '관리자 계정으로 복귀 중...';
-      showToast(loadMsg, 'loading');
-      callApiWithRetry('revertImpersonation', { sessionToken: token }, function(res) {
-        if (res && res.success) {
-          localStorage.setItem(TOKEN_KEY, res.sessionToken);
-          currentUser = res;
-          if (res.lang) {
-            currentLang = res.lang;
-            localStorage.setItem(LANG_KEY, currentLang);
-            applyTranslations();
-          }
-          if (res.avatarUrl) {
-            const av = document.getElementById('header-avatar');
-            if (av) { av.src = res.avatarUrl; av.style.display = 'inline-block'; }
-          } else {
-            const av = document.getElementById('header-avatar');
-            if (av) { av.src = ''; av.style.display = 'none'; }
-          }
-          updateImpersonationBanner();
-          updateTempAccountBanner();
-          applyGuestCommentRestrictions();
-          updateCommentUI();
-          checkUnreadInquiry();
-          checkPendingApprovals();
-          let succMsg = '管理者アカウントに戻りました';
-          if (currentLang === 'en') succMsg = 'Reverted to admin account';
-          if (currentLang === 'ko') succMsg = '관리자 계정으로 복귀했습니다';
-          showToast(succMsg, 'success');
-
-          if (res.targetUserId) {
-            setTimeout(() => {
-              if (isInquiryOpen) closeInquiry();
-              openInquiry();
-              selectInquiryRoom(res.targetUserId);
-            }, 350);
-          }
-        } else {
-          if (res.needRelogin) {
-            executeLogout();
-          } else {
-            let failMsg = 'アカウントの切り替えに失敗しました';
-            if (currentLang === 'en') failMsg = 'Failed to revert';
-            if (currentLang === 'ko') failMsg = '계정 복귀에 실패했습니다';
-            showToast(failMsg, 'error');
-          }
-        }
-      });
-    }
-    function sendInquiryMessage() {
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (!token) {
-        let errToast = 'メッセージを送信するにはログインが必要です';
-        if (currentLang === 'en') errToast = 'Login is required to send messages';
-        if (currentLang === 'ko') errToast = '메시지를 보내려면 로그인이 필요합니다';
-        showToast(errToast, 'error');
-        handleTopButton();
-        return;
-      }
-      const inputEl = document.getElementById('inquiry-main-input');
-      const text = inputEl ? inputEl.value.trim() : '';
-      if (!text) return;
-      const sendBtn = document.querySelector('.inquiry-send-btn');
-      if (sendBtn) {
-        sendBtn.classList.add('sending');
-        sendBtn.disabled = true;
-      }
-      const isOwner = (currentUser.role === '@owner');
-      const targetUid = isOwner ? currentInquiryTargetUserId : currentUser.userId;
-      callApiWithRetry('postInquiryMessage', { sessionToken: token, targetUserId: targetUid, messageText: text }, function(res) {
-        if (res && res.success) {
-          if (inputEl) {
-            inputEl.value = '';
-            inputEl.style.height = 'auto';
-          }
-          if (sendBtn) {
-            sendBtn.classList.remove('sending');
-            sendBtn.classList.add('success');
-            sendBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
-          }
-          showToast(t('inquirySent'), 'success');
-          inquiryMessages.push({
-            timestamp: t('justNow'),
-            targetUserId: targetUid,
-            senderType: isOwner ? 'admin' : 'user',
-            senderId: currentUser.userId,
-            senderName: currentUser.userName || t('you'),
-            avatarUrl: currentUser.avatarUrl || '',
-            messageText: text
-          });
-          const partnerObj = inquiryRooms.find(r => r.userId === targetUid) || { userId: targetUid, userName: targetUid, avatarUrl: '' };
-          renderInquiryMessages(partnerObj, isOwner, currentUser.role, true);
-          fetchInquiryMessages(targetUid, true);
-          setTimeout(() => {
-            if (sendBtn) {
-              sendBtn.classList.remove('success');
-              sendBtn.disabled = false;
-              sendBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>`;
-            }
-          }, 1200);
-        } else {
-          if (sendBtn) {
-            sendBtn.classList.remove('sending');
-            sendBtn.disabled = false;
-          }
-          let failMsg = '送信に失敗しました';
-          if (currentLang === 'en') failMsg = 'Failed to send message';
-          if (currentLang === 'ko') failMsg = '메시지 전송に失敗しました';
-          showToast(res.message || failMsg, 'error');
-        }
-      });
-    }
-    function escapeHtml(str) {
-      if (!str) return '';
-      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-    }
-    function autoLinkText(str) {
-      if (!str) return '';
-      const escaped = escapeHtml(str);
-      const urlRegex = /(https?:\/\/[^\s<]+)/g;
-      return escaped.replace(urlRegex, function(url) {
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="comment-link" onclick="event.stopPropagation();">${url}</a>`;
-      });
-    }
-    function redirectToArchive() {
-      const btn = document.getElementById('archive-site-btn');
-      if (!btn) return;
-      btn.disabled = true;
-      let redirText = 'リダイレクト中';
-      if (currentLang === 'en') redirText = 'Redirecting';
-      if (currentLang === 'ko') redirText = '이동 중';
-      btn.innerHTML = `${redirText}<span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>`;
-      
-      const liffArchiveUrl = 'https://liff.line.me/2011370236-GhC6I5kJ?app=archive';
-      setTimeout(() => {
-        try {
-          if (window.top && window.top !== window) {
-            window.top.location.href = liffArchiveUrl;
-          } else {
-            window.location.href = liffArchiveUrl;
-          }
-        } catch (e) {
-          window.open(liffArchiveUrl, '_top');
-        }
-      }, 300);
-    }
-    function handleTopButton(isLineLinkMode = false) {
-      const token = localStorage.getItem(TOKEN_KEY);
-      const overlay = document.getElementById('modal-overlay');
-      overlay.classList.add('active');
-      if (!token) {
-        openLoginDialog(isLineLinkMode);
-      } else {
-        const isGuestUser = (currentUser.userId === GUEST_ID || currentUser.isGuest);
-        document.getElementById('mp-name').innerText = isGuestUser ? t('inquiryOnly') : (currentUser.userName || currentUser.userId);
-        document.getElementById('mp-id').innerText = currentUser.userId;
-        
-        const lineRow = document.getElementById('mp-line-row');
-        const lineBadge = document.getElementById('mp-line-badge');
-        const autologinRow = document.getElementById('mp-autologin-row');
-        const autologinBadge = document.getElementById('mp-autologin-badge');
-        const tempPillBadge = document.getElementById('mp-temp-pill-badge');
-        
-        if (currentUser.isTemporary) {
-          if (tempPillBadge) tempPillBadge.style.display = 'inline-block';
-          if (lineRow) lineRow.style.display = 'none';
-          if (autologinRow) autologinRow.style.display = 'none';
-        } else {
-          if (tempPillBadge) tempPillBadge.style.display = 'none';
-          if (lineRow && lineBadge && autologinRow && autologinBadge) {
-            if (isGuestUser) {
-              lineRow.style.display = 'none';
-              autologinRow.style.display = 'none';
-            } else {
-              lineRow.style.display = 'flex';
-              autologinRow.style.display = 'flex';
-              if (currentUser.isLineLinked) {
-                lineBadge.className = 'status-dot-text linked';
-                lineBadge.innerHTML = `<span class="status-dot green"></span>${t('statusLinked')}`;
-                autologinBadge.className = 'status-dot-text linked';
-                autologinBadge.innerHTML = `<span class="status-dot green"></span>${t('statusEnabled')}`;
-              } else {
-                lineBadge.className = 'status-dot-text unlinked';
-                lineBadge.innerHTML = `<span class="status-dot gray"></span>${t('statusUnlinked')}`;
-                autologinBadge.className = 'status-dot-text unlinked';
-                autologinBadge.innerHTML = `<span class="status-dot gray"></span>${t('statusDisabled')}`;
-              }
-            }
-          }
-        }
-
-        const img = document.getElementById('mp-avatar-img');
-        const ph = document.getElementById('mp-avatar-placeholder');
-        if (currentUser.avatarUrl) {
-          img.src = currentUser.avatarUrl; img.style.display = 'block'; ph.style.display = 'none';
-        } else {
-          img.style.display = 'none'; ph.style.display = 'block';
-        }
-
-        const isOwner = (currentUser.role === '@owner');
-        const ownerQrBtn = document.getElementById('avatar-owner-qr-btn');
-        const userScanBtn = document.getElementById('avatar-user-scan-btn');
-
-        if (ownerQrBtn) {
-          ownerQrBtn.style.display = (isOwner && !currentUser.isImpersonated) ? 'flex' : 'none';
-        }
-        if (userScanBtn) {
-          userScanBtn.style.display = (!isOwner && !isGuestUser && !currentUser.isTemporary) ? 'flex' : 'none';
-        }
-        
-        const isManager = !currentUser.isImpersonated && (currentUser.role === '@owner' || currentUser.role === '@admin');
-        const approvalBtn = document.getElementById('pending-approval-btn');
-        if (approvalBtn) {
-          approvalBtn.style.display = isManager ? 'block' : 'none';
-          const countEl = document.getElementById('pending-approval-count');
-          if (countEl) countEl.innerText = pendingApprovalCount;
-        }
-
-        const archiveBtn = document.getElementById('archive-site-btn');
-        if (currentUser.userId && currentUser.userId !== GUEST_ID && !currentUser.isImpersonated && !currentUser.isTemporary) {
-          archiveBtn.style.display = 'block';
-          archiveBtn.disabled = false;
-          archiveBtn.innerText = t('archiveBtn');
-        } else {
-          archiveBtn.style.display = 'none';
-        }
-
-        const logoutWrap = document.getElementById('logout-btn-wrap');
-        if (logoutWrap) {
-          logoutWrap.style.display = (isOwner && !currentUser.isImpersonated) ? 'block' : 'none';
-        }
-        document.getElementById('mypage-dialog').classList.add('active');
-      }
-    }
-
-    function openOwnerQrModal() {
-      closeModal();
-      document.getElementById('modal-overlay').classList.add('active');
-      document.getElementById('owner-qr-dialog').classList.add('active');
-      switchQrRole('@admin');
-    }
-
-    function closeOwnerQrModal() {
-      clearInterval(qrTimerInterval);
-      document.getElementById('owner-qr-dialog').classList.remove('active');
-      document.getElementById('modal-overlay').classList.remove('active');
-    }
-
-    function switchQrRole(role) {
-      currentQrRole = role;
-      const tabAdmin = document.getElementById('qr-tab-admin');
-      const tabUser = document.getElementById('qr-tab-user');
-      if (role === '@admin') {
-        tabAdmin.className = 'qr-tab-btn admin active';
-        tabUser.className = 'qr-tab-btn user';
-      } else {
-        tabAdmin.className = 'qr-tab-btn admin';
-        tabUser.className = 'qr-tab-btn user active';
-      }
-      generateAndDisplayQr(role);
-    }
-
-    function generateAndDisplayQr(role) {
-      const token = localStorage.getItem(TOKEN_KEY);
-      const container = document.getElementById('qr-display-container');
-      const timerEl = document.getElementById('qr-timer-text');
-      clearInterval(qrTimerInterval);
-
-      if (!token) return;
-      container.innerHTML = `<div style="font-size:12px; color:#888;">${t('qrGenerating')}</div>`;
-
-      callApiWithRetry('generateRoleToken', { sessionToken: token, targetRole: role }, function(res) {
-        if (res && res.success) {
-          const qrText = res.token;
-          container.innerHTML = '';
-          
-          new QRCode(container, {
-            text: qrText,
-            width: 170,
-            height: 170,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.M
-          });
-
-          currentQrExpireEpoch = res.expireEpoch;
-
-          function updateTimer() {
-            const now = new Date().getTime();
-            const leftMs = currentQrExpireEpoch - now;
-            if (leftMs <= 0) {
-              clearInterval(qrTimerInterval);
-              timerEl.innerHTML = `<span style="color:#e53935;">${t('qrExpired')}</span>`;
-              container.innerHTML = `<div style="font-size:12px; color:#e53935; padding:20px; text-align:center;">${t('qrExpired')}</div>`;
-              return;
-            }
-            const sec = Math.floor(leftMs / 1000) % 60;
-            const min = Math.floor(leftMs / 60000);
-            timerEl.innerText = `${t('qrExpireRemaining')} ${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-          }
-
-          updateTimer();
-          qrTimerInterval = setInterval(updateTimer, 1000);
-        } else {
-          container.innerHTML = `<div style="font-size:12px; color:#e53935;">${res.message || '生成失敗'}</div>`;
-        }
-      });
-    }
-
-    function openQrScanModal() {
-      closeModal();
-      document.getElementById('modal-overlay').classList.add('active');
-      document.getElementById('user-qr-scan-dialog').classList.add('active');
-      isProcessingQrScan = false;
-      const statusEl = document.getElementById('qr-scan-status-text');
-      if (statusEl) statusEl.innerText = '';
-    }
-
-    function closeQrScanModal() {
-      document.getElementById('user-qr-scan-dialog').classList.remove('active');
-      document.getElementById('modal-overlay').classList.remove('active');
-    }
-
-    function handleQrFileScan(inputEl) {
-      if (!inputEl.files || inputEl.files.length === 0) return;
-      const file = inputEl.files[0];
-      const statusEl = document.getElementById('qr-scan-status-text');
-      if (statusEl) statusEl.innerText = t('qrAnalyzing');
-
-      if (!html5QrScannerInstance) {
-        html5QrScannerInstance = new Html5Qrcode("qr-reader-video");
-      }
-
-      html5QrScannerInstance.scanFile(file, true)
-        .then(decodedText => {
-          onQrCodeSuccess(decodedText);
-        })
-        .catch(err => {
-          if (statusEl) statusEl.innerHTML = `<span style="color:#e53935;">${t('qrFailedDetect')}</span>`;
-          inputEl.value = '';
-        });
-    }
-
-    function onQrCodeSuccess(decodedText) {
-      if (isProcessingQrScan) return;
-      isProcessingQrScan = true;
-
-      const token = localStorage.getItem(TOKEN_KEY);
-      const statusEl = document.getElementById('qr-scan-status-text');
-      if (statusEl) statusEl.innerText = t('qrUpdating');
-
-      callApiWithRetry('applyRoleToken', { sessionToken: token, tokenStr: decodedText }, function(res) {
-        if (res && res.success) {
-          currentUser.role = res.newRole;
-          closeQrScanModal();
-          let roleName = '一般ユーザー';
-          if (res.newRole === '@admin') {
-            roleName = currentLang === 'en' ? 'Admin (@admin)' : (currentLang === 'ko' ? '관리자 (@admin)' : '管理者（@admin）');
-          } else {
-            roleName = currentLang === 'en' ? 'User' : (currentLang === 'ko' ? '일반 사용자' : '一般ユーザー');
-          }
-          let succMsg = `権限が「${roleName}」に更新されました！`;
-          if (currentLang === 'en') succMsg = `Role updated to "${roleName}"!`;
-          if (currentLang === 'ko') succMsg = `권한이 "${roleName}"(으)로 변경되었습니다!`;
-          showToast(succMsg, 'success');
-          checkPendingApprovals();
-          applyGuestCommentRestrictions();
-        } else {
-          let failMsg = '権限の更新に失敗しました';
-          if (currentLang === 'en') failMsg = 'Failed to update role';
-          if (currentLang === 'ko') failMsg = '권한 업데이트에 실패했습니다';
-          showToast(res.message || failMsg, 'error');
-          isProcessingQrScan = false;
-          if (statusEl) statusEl.innerText = '';
-        }
-      }, function(err) {
-        let errMsg = '通信エラーが発生しました';
-        if (currentLang === 'en') errMsg = 'Communication error';
-        if (currentLang === 'ko') errMsg = '통신 오류가 발생했습니다';
-        showToast(errMsg, 'error');
-        isProcessingQrScan = false;
-        if (statusEl) statusEl.innerText = '';
-      });
-    }
-
-    function openLoginDialog(isLineLinkMode = false) {
-      document.getElementById('new-user-dialog').classList.remove('active');
-      document.getElementById('login-dialog').classList.add('active');
-      document.getElementById('login-err').innerText = '';
-      document.getElementById('login-uid').value = '';
-      const pwdInput = document.getElementById('login-pwd');
-      pwdInput.value = '';
-      pwdInput.type = 'password';
-      const toggleBtnPath = document.querySelector('#login-dialog .pwd-toggle-btn path');
-      if (toggleBtnPath) toggleBtnPath.setAttribute('d', PATH_EYE_OPEN);
-    }
-
-    function openNewUserDialog() {
-      document.getElementById('login-dialog').classList.remove('active');
-      document.getElementById('new-user-dialog').classList.add('active');
-      document.getElementById('nu-err').innerText = '';
-      document.getElementById('nu-empid').value = '';
-      document.getElementById('nu-name').value = '';
-      document.getElementById('nu-birth-month').value = '';
-      updateBirthDayOptions();
-    }
-
-    function closeModal() {
-      if (!currentUser.userId) {
-        return;
-      }
-      document.getElementById('modal-overlay').classList.remove('active');
-      document.getElementById('login-dialog').classList.remove('active');
-      document.getElementById('new-user-dialog').classList.remove('active');
-      document.getElementById('mypage-dialog').classList.remove('active');
-      document.getElementById('approval-list-dialog').classList.remove('active');
-      document.getElementById('owner-qr-dialog').classList.remove('active');
-      document.getElementById('user-qr-scan-dialog').classList.remove('active');
-      document.getElementById('lang-select-dialog').classList.remove('active');
-    }
-
-    function openLogoutConfirm() {
-      document.body.classList.add('confirm-open');
-      document.getElementById('confirm-overlay').classList.add('active');
-      document.getElementById('confirm-dialog').classList.add('active');
-    }
-    function closeLogoutConfirm() {
-      document.body.classList.remove('confirm-open');
-      document.getElementById('confirm-overlay').classList.remove('active');
-      document.getElementById('confirm-dialog').classList.remove('active');
-    }
-    function executeLogout() {
-      clearInterval(countdownInterval);
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (token) {
-        callApiWithRetry('destroySession', { sessionToken: token });
-      }
-      localStorage.removeItem(TOKEN_KEY);
-      closeLogoutConfirm();
-      closeModal();
-      if (isInquiryOpen) closeInquiry();
-      if (isChatOpen) toggleChat();
-      let logMsg = 'ログアウトしました';
-      if (currentLang === 'en') logMsg = 'Logged out';
-      if (currentLang === 'ko') logMsg = '로그아웃되었습니다';
-      showToast(logMsg);
-      currentUser = { userId: '', userName: '', avatarUrl: '', isGuest: false, isLineLinked: false, role: 'user', lang: currentLang, isTemporary: false, tempExpireEpoch: null, isImpersonated: false, originalRole: '' };
-      unreadInquiryCount = 0;
-      pendingApprovalCount = 0;
-      updateUnreadNotificationDisplay();
-      updateApprovalBadgeDisplay();
-      updateTempAccountBanner();
-      
-      const headerAvatar = document.getElementById('header-avatar');
-      if (headerAvatar) {
-        headerAvatar.src = '';
-        headerAvatar.style.display = 'none';
-      }
-      document.getElementById('mp-name').innerText = '-';
-      document.getElementById('mp-id').innerText = '-';
-      document.getElementById('mp-avatar-img').style.display = 'none';
-      document.getElementById('mp-avatar-placeholder').style.display = 'block';
-      document.getElementById('archive-site-btn').style.display = 'none';
-      updateImpersonationBanner();
-      applyGuestCommentRestrictions();
-      setTimeout(() => {
-        handleTopButton();
-      }, 300);
-    }
-
-    function handleLoginSubmit(e) {
-      if (e) e.preventDefault();
-      submitLogin();
-      return false;
-    }
-    function submitLogin() {
-      const uid = document.getElementById('login-uid').value.trim();
-      const pwd = document.getElementById('login-pwd').value.trim();
-      const err = document.getElementById('login-err');
-      const submitBtn = document.getElementById('login-submit-btn');
-      if (!uid || !pwd) {
-        let errText = 'IDとパスワードを入力してください';
-        if (currentLang === 'en') errText = 'Please enter ID and password';
-        if (currentLang === 'ko') errText = 'ID와 비밀번호를 입력해 주세요';
-        err.innerText = errText;
-        return;
-      }
-      submitBtn.disabled = true;
-      let authText = '認証中';
-      if (currentLang === 'en') authText = 'Authenticating';
-      if (currentLang === 'ko') authText = '인증 중';
-      submitBtn.innerHTML = `${authText}<span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>`;
-      err.innerText = '';
-      callApiWithRetry('authenticateUser', { userId: uid, password: pwd }, function(res) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = t('login');
-        if (res.success) {
-          localStorage.setItem(TOKEN_KEY, res.sessionToken);
-          currentUser = res;
-          if (res.lang) {
-            currentLang = res.lang;
-            localStorage.setItem(LANG_KEY, currentLang);
-            applyTranslations();
-          }
-          closeModal();
-          if (SERVER_LINE_UID) {
-            callApiWithRetry('linkLineUid', { sessionToken: res.sessionToken, lineUid: SERVER_LINE_UID }, function(linkRes) {
-              if (linkRes && linkRes.success) {
-                currentUser.isLineLinked = true;
-                let linkMsg = 'LINEアカウントと連携しました';
-                let autoMsg = '次回から自動でログインされます';
-                if (currentLang === 'en') { linkMsg = 'Linked with LINE account'; autoMsg = 'Auto-login enabled for next visit'; }
-                if (currentLang === 'ko') { linkMsg = 'LINE 계정과 연동되었습니다'; autoMsg = '다음부터 자동으로 로그인됩니다'; }
-                showToast(linkMsg, 'success');
-                setTimeout(() => {
-                  showToast(autoMsg, 'success');
-                }, 2200);
-              } else if (linkRes && linkRes.message) {
-                showToast(linkRes.message, 'error');
-              }
-            });
-          }
-          if (res.avatarUrl) {
-            const av = document.getElementById('header-avatar');
-            if (av) {
-              av.src = res.avatarUrl;
-              av.style.display = 'inline-block';
-            }
-          }
-          updateImpersonationBanner();
-          updateTempAccountBanner();
-          applyGuestCommentRestrictions();
-          updateCommentUI();
-          checkUnreadInquiry();
-          checkPendingApprovals();
-          if (!SERVER_LINE_UID) {
-            let logSucc = 'ログインしました';
-            if (currentLang === 'en') logSucc = 'Logged in successfully';
-            if (currentLang === 'ko') logSucc = '로그인되었습니다';
-            showToast(logSucc, 'success');
-          }
-        } else {
-          err.innerText = res.message;
-          showToast(res.message, 'error');
-        }
-      });
-    }
-
-    function handleNewUserSubmit(e) {
-      if (e) e.preventDefault();
-      const empIdPost = document.getElementById('nu-empid').value.trim();
-      const fullEmpId = `4162${empIdPost}`;
-      const month = document.getElementById('nu-birth-month').value;
-      const day = document.getElementById('nu-birth-day').value;
-      const name = document.getElementById('nu-name').value.trim();
-      const err = document.getElementById('nu-err');
-      const submitBtn = document.getElementById('nu-submit-btn');
-
-      if (!/^\d{4}$/.test(empIdPost)) {
-        let msg = '社員番号の下4桁を数字で入力してください';
-        if (currentLang === 'en') msg = 'Please enter last 4 digits of Employee ID';
-        if (currentLang === 'ko') msg = '사원번호 마지막 4자리 숫자를 입력해 주세요';
-        err.innerText = msg;
-        return false;
-      }
-      if (!month || !day) {
-        let msg = '誕生月と日付を選択してください';
-        if (currentLang === 'en') msg = 'Please select birth month and day';
-        if (currentLang === 'ko') msg = '생년월일(월, 일)을 선택해 주세요';
-        err.innerText = msg;
-        return false;
-      }
-      if (!name) {
-        let msg = '氏名を入力してください';
-        if (currentLang === 'en') msg = 'Please enter your full name';
-        if (currentLang === 'ko') msg = '이름을 입력해 주세요';
-        err.innerText = msg;
-        return false;
-      }
-
-      submitBtn.disabled = true;
-      let regText = 'アカウント作成中';
-      if (currentLang === 'en') regText = 'Creating account';
-      if (currentLang === 'ko') regText = '계정 생성 중';
-      submitBtn.innerHTML = `${regText}<span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>`;
-      err.innerText = '';
-
-      callApiWithRetry('registerTemporaryUser', {
-        lineUid: SERVER_LINE_UID,
-        employeeId: fullEmpId,
-        birthMonth: month,
-        birthDay: day,
-        userName: name
-      }, function(res) {
-        submitBtn.disabled = false;
-        let btnText = '上記情報で仮登録して閲覧を開始';
-        if (currentLang === 'en') btnText = 'Register & Start Browsing';
-        if (currentLang === 'ko') btnText = '위 정보로 임시 등록 후 열람 시작';
-        submitBtn.innerHTML = btnText;
-        if (res.success) {
-          localStorage.setItem(TOKEN_KEY, res.sessionToken);
-          currentUser = res;
-          closeModal();
-          updateImpersonationBanner();
-          updateTempAccountBanner();
-          applyGuestCommentRestrictions();
-          updateCommentUI();
-          checkUnreadInquiry();
-          checkPendingApprovals();
-          let succMsg = '仮登録が完了しました';
-          let waitMsg = '本登録完了までしばらくお待ちください';
-          if (currentLang === 'en') { succMsg = 'Temporary registration completed'; waitMsg = 'Please wait for administrator approval'; }
-          if (currentLang === 'ko') { succMsg = '임시 등록이 완료되었습니다'; waitMsg = '정식 승인 완료까지 잠시만 기다려 주세요'; }
-          showToast(succMsg, 'success');
-          setTimeout(() => {
-            showToast(waitMsg, 'success');
-          }, 2400);
-        } else {
-          let displayMsg = res.message || '登録に失敗しました';
-          if (displayMsg.includes('既に登録されています') || displayMsg.includes('利用できません')) {
-            displayMsg = '入力された社員番号は利用できません';
-            if (currentLang === 'en') displayMsg = 'Entered Employee ID is not available';
-            if (currentLang === 'ko') displayMsg = '입력하신 사원번호는 사용할 수 없습니다';
-          }
-          err.innerText = displayMsg;
-          showToast(displayMsg, 'error');
-        }
-      });
-      return false;
-    }
-
-    function showToast(msg, type = 'success') {
-      const toast = document.getElementById('custom-toast');
-      const text = document.getElementById('toast-text');
-      const svgIcon = document.getElementById('toast-svg-icon');
-      
-      text.innerText = msg;
-      if (type === 'error') {
-        svgIcon.style.fill = '#ff3b30';
-        svgIcon.innerHTML = `<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>`;
-      } else if (type === 'loading') {
-        svgIcon.style.fill = '#93c5fd';
-        svgIcon.innerHTML = `<path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>`;
-      } else {
-        svgIcon.style.fill = '#34c759';
-        svgIcon.innerHTML = `<path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>`;
-      }
-      toast.classList.add('show');
-      if (toastTimer) clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 2600);
     }
   </script>
 </body>
