@@ -21,7 +21,7 @@
       overscroll-behavior-y: none;
       -webkit-text-size-adjust: 100%;
     }
-    .app-root, .modal-dialog, #today-header-bar, #temp-account-banner-bar, #story-bubbles-wrapper, #chat-footer-bar, .pdf-container, #inquiry-rooms-wrapper, #inquiry-chat-wrapper, #inquiry-footer-bar {
+    .app-root, .modal-dialog, #today-header-bar, #temp-account-banner-bar, #story-bubbles-wrapper, #chat-footer-bar, .viewer-container, #inquiry-rooms-wrapper, #inquiry-chat-wrapper, #inquiry-footer-bar {
       transition: filter 0.25s ease, -webkit-filter 0.25s ease !important;
     }
     body.confirm-open .app-root,
@@ -30,7 +30,7 @@
     body.confirm-open #temp-account-banner-bar,
     body.confirm-open #story-bubbles-wrapper,
     body.confirm-open #chat-footer-bar,
-    body.confirm-open .pdf-container,
+    body.confirm-open .viewer-container,
     body.confirm-open #inquiry-rooms-wrapper,
     body.confirm-open #inquiry-chat-wrapper,
     body.confirm-open #inquiry-footer-bar {
@@ -766,44 +766,51 @@
       fill: #fff;
     }
 
-    .pdf-container {
+    /* ★ 独自ビューアーコンテナ (高画質原本HTML/PDF共通) */
+    .viewer-container {
       position: fixed; top: 48px; left: 0; width: 100vw; height: calc(100vh - 48px);
-      overflow: auto; -webkit-overflow-scrolling: touch; background: #000;
+      overflow-y: auto; -webkit-overflow-scrolling: touch; background: #222;
       touch-action: pan-x pan-y pinch-zoom;
     }
-    body.has-temp-banner .pdf-container { top: 78px; height: calc(100vh - 78px); }
-    body.impersonating .pdf-container { top: 80px; height: calc(100vh - 80px); }
-    body.impersonating.has-temp-banner .pdf-container { top: 110px; height: calc(100vh - 110px); }
-    .pdf-frame { width: 100%; height: 100%; border: none; display: block; touch-action: pan-x pan-y pinch-zoom; }
+    body.has-temp-banner .viewer-container { top: 78px; height: calc(100vh - 78px); }
+    body.impersonating .viewer-container { top: 80px; height: calc(100vh - 80px); }
+    body.impersonating.has-temp-banner .viewer-container { top: 110px; height: calc(100vh - 110px); }
+    
+    /* 独自HTML展開ラッパー */
+    .custom-html-wrapper {
+      width: 100%;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #222;
+      padding: 10px 0 30px 0;
+      box-sizing: border-box;
+    }
+    .custom-html-frame {
+      width: 100%;
+      max-width: 800px;
+      background: #fff;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      border-radius: 4px;
+      overflow: hidden;
+      padding: 16px 12px;
+      box-sizing: border-box;
+    }
+    .custom-html-frame img {
+      max-width: 100% !important;
+      height: auto !important;
+      display: block !important;
+      margin: 0 auto 10px auto !important;
+    }
 
-    .pending-user-card {
-      background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 14px;
-      padding: 14px 16px; margin-bottom: 12px; text-align: left;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    .pdf-fallback-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      touch-action: pan-x pan-y pinch-zoom;
     }
-    .pending-card-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
-      padding-bottom: 8px; border-bottom: 1px dashed #e2e8f0;
-    }
-    .pending-card-name {
-      font-size: 14.5px; font-weight: 700; color: #1e293b;
-    }
-    .pending-card-time {
-      font-size: 11.5px; color: #64748b; font-weight: 600;
-    }
-    .pending-card-row {
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: 12.5px; margin-bottom: 5px; color: #475569;
-    }
-    .pending-card-row .val {
-      font-weight: 700; color: #1e293b; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    }
-    .pending-approve-action-btn {
-      width: 100%; padding: 9px 0; background: #8b5cf6; color: #fff;
-      border: none; border-radius: 8px; font-size: 13px; font-weight: 700;
-      cursor: pointer; transition: background 0.15s; margin-top: 10px;
-    }
-    .pending-approve-action-btn:active { background: #7c3aed; }
 
     .custom-toast {
       position: fixed; top: 20px; left: 50%; transform: translate(-50%, -80px);
@@ -947,14 +954,12 @@
         <svg id="mp-avatar-placeholder" style="width:36px; height:36px; fill:#94a3b8;" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
       </div>
 
-      <!-- ① @owner用: モノクロQRコードアイコンボタン -->
       <button type="button" id="avatar-owner-qr-btn" class="avatar-side-icon-btn" onclick="openOwnerQrModal()" title="権限付与用QRコードを表示">
         <svg viewBox="0 0 24 24">
           <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v3h-3v-3zm-5 5h3v3h-3v-3zm5 0h3v3h-3v-3zm-5-5h3v3h-3v-3zm-2-2h2v2h-2v-2zm7 7h2v2h-2v-2z"/>
         </svg>
       </button>
 
-      <!-- ② @admin・一般用: 正方形スキャナー形状のモノクロアイコンボタン -->
       <button type="button" id="avatar-user-scan-btn" class="avatar-side-icon-btn" onclick="openQrScanModal()" title="権限更新（QRスキャン）">
         <svg viewBox="0 0 24 24">
           <path d="M4 4v5h2V6h3V4H4zm16 0h-5v2h3v3h2V4zM4 20h5v-2H6v-3H4v5zm16 0v-5h-2v3h-3v2h5zM3 11h18v2H3v-2z"/>
@@ -970,7 +975,6 @@
       <div class="badge-row"><span id="mp-lbl-name">利用者氏名：</span><span class="badge-val" id="mp-name">-</span></div>
       <div class="badge-row" style="margin-top: 6px;"><span id="mp-lbl-uid">ユーザーID：</span><span class="badge-val" id="mp-id">-</span></div>
       
-      <!-- 本アカウント用表示行 -->
       <div class="badge-row" id="mp-line-row" style="margin-top: 8px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
         <span id="mp-lbl-line">LINEアカウント：</span>
         <span id="mp-line-badge" class="status-dot-text unlinked"><span class="status-dot gray"></span>未連携</span>
@@ -1136,6 +1140,7 @@
     let isChatOpen = false;
     let currentComments = [];
     let currentReportDateSuffix = '';
+    let cachedReportHtmlContent = ''; // ★ 高画質原本HTMLキャッシュ保存用
     let activeReactionMenuRow = null;
     let isInquiryOpen = false;
     let currentInquiryTargetUserId = '';
@@ -1629,11 +1634,12 @@
         SERVER_LINE_UID = urlParams.get('line_uid') || '';
       }
 
-      // 2. バックエンドから一括初期データを取得
+      // 2. バックエンドから一括初期データを取得（原本HTMLキャッシュを含む）
       callApiWithRetry('getInitialAppData', {}, function(initRes) {
         if (initRes && initRes.success) {
           if (initRes.targetDateSuffix) currentReportDateSuffix = initRes.targetDateSuffix;
           currentComments = initRes.comments || [];
+          cachedReportHtmlContent = initRes.reportHtml || '';
           checkAuthOnLoad(initRes.reportData?.data || initRes.reportData);
         } else {
           document.body.innerHTML = `<div style="color:#fff; text-align:center; padding:50px; font-family:sans-serif;">${t('reportNotFound')}</div>`;
@@ -1917,6 +1923,9 @@
       }
     }
 
+    // ==========================================
+    // ★ 独自ビューアー レンダリング処理
+    // ==========================================
     function renderView(data) {
       const match = (data && data.url) ? data.url.match(/\d{8}/) : null;
       if (!currentReportDateSuffix) {
@@ -1925,6 +1934,22 @@
       
       const headerFormattedDate = formatReportHeaderDate(currentReportDateSuffix);
       const viewerUrl = (data && data.url) ? data.url : '';
+
+      // ★ 独自HTMLキャッシュがある場合はインライン展開、無ければPDFフォールバック
+      let viewerContentHtml = '';
+      if (cachedReportHtmlContent && cachedReportHtmlContent.trim().length > 0) {
+        viewerContentHtml = `
+          <div class="custom-html-wrapper">
+            <div class="custom-html-frame">
+              ${cachedReportHtmlContent}
+            </div>
+          </div>
+        `;
+      } else {
+        viewerContentHtml = `
+          <iframe class="pdf-fallback-frame" src="${viewerUrl}" allow="autoplay"></iframe>
+        `;
+      }
 
       document.getElementById('app-container').innerHTML = `
         <div id="today-header-bar">
@@ -1976,8 +2001,8 @@
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </div>
-        <div class="pdf-container">
-          <iframe class="pdf-frame" src="${viewerUrl}" allow="autoplay"></iframe>
+        <div class="viewer-container" id="viewer-container">
+          ${viewerContentHtml}
         </div>
       `;
       updateImpersonationBanner();
@@ -2273,7 +2298,7 @@
           }
           let errToast = '投稿に失敗しました';
           if (currentLang === 'en') errToast = 'Failed to post comment';
-          if (currentLang === 'ko') errToast = '등록에 실패했습니다';
+          if (currentLang === 'ko') errToast = '등록に失敗しました';
           showToast(res.message || errToast, 'error');
         }
       });
@@ -3005,7 +3030,6 @@
       }
     }
 
-    // QRコードモーダル
     function openOwnerQrModal() {
       closeModal();
       document.getElementById('modal-overlay').classList.add('active');
