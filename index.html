@@ -3,236 +3,85 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title id="page-title">現在、利用できません</title>
-  <!-- ★ LINE LIFF SDK -->
+  <title id="page-title">リダイレクト中</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body {
-      background-color: #000000;
-      color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    html, body {
+      background-color: #000;
+      color: #fff;
+      height: 100vh;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
-      height: 100vh;
-      margin: 0;
-      text-align: center;
-      padding: 20px;
-      position: relative;
-      overflow: hidden;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    /* 右上の言語切り替えピルスイッチ */
-    .lang-switcher {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      display: inline-flex;
-      background: #1e1e1e;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 16px;
-      padding: 2px;
-      gap: 2px;
-      z-index: 20;
-    }
-    .lang-btn {
-      border: none;
-      background: transparent;
-      padding: 4px 10px;
-      border-radius: 14px;
-      font-size: 11px;
-      font-weight: 700;
-      color: #888888;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-    .lang-btn.active {
-      background: #333333;
-      color: #ffffff;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    }
-    /* ★ アイコン（5回タップ領域） */
-    .icon-wrapper {
-      padding: 15px;
-      cursor: pointer;
-      display: inline-flex;
       align-items: center;
-      justify-content: center;
+    }
+    .app-spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      border-top: 3px solid #fff;
       border-radius: 50%;
+      animation: spin 0.75s linear infinite;
     }
-    .icon {
-      font-size: 48px;
-      transition: transform 0.12s ease;
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
-    .icon.floating {
-      animation: float 2s ease-in-out infinite;
-    }
-    .icon.tapped {
-      transform: scale(0.85);
-    }
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-    h1 {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      letter-spacing: 0.5px;
-    }
-    p {
+    .loader-text {
       font-size: 13px;
-      line-height: 1.6;
+      font-weight: 600;
       color: #aaa;
-    }
-
-    /* 管理者認証モーダル */
-    .admin-modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      z-index: 1000;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    }
-    .admin-modal-overlay.active {
-      display: block;
-      opacity: 1;
-    }
-    .admin-modal-dialog {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0.95);
-      width: 85%;
-      max-width: 320px;
-      background: #1e1e1e;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 18px;
-      padding: 22px 20px;
-      z-index: 1001;
-      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6);
-      text-align: center;
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .admin-modal-dialog.active {
-      display: block;
-      transform: translate(-50%, -50%) scale(1);
-    }
-    .modal-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-    .modal-head-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #ffffff;
       letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 16px;
     }
-    .modal-close-btn {
-      background: none;
-      border: none;
-      color: #888;
-      font-size: 18px;
-      cursor: pointer;
-      line-height: 1;
-      padding: 2px 6px;
+    .dots-bounce {
+      display: inline-flex;
+      margin-left: 2px;
+      gap: 1.5px;
     }
-    /* プレースホルダーなし、桁数推測不可 */
-    .admin-pwd-input {
-      width: 100%;
-      padding: 12px 14px;
-      background: #2a2a2a;
-      border: 1.5px solid #444;
-      border-radius: 10px;
-      color: #ffffff;
-      font-size: 16px;
-      text-align: center;
-      outline: none;
-      box-sizing: border-box;
-      margin-bottom: 6px;
-    }
-    .admin-pwd-input:focus {
-      border-color: #8b5cf6;
-    }
-    .modal-err-text {
-      font-size: 12px;
-      color: #ef4444;
-      min-height: 18px;
-      margin-bottom: 10px;
-    }
-    .admin-submit-btn {
-      width: 100%;
-      padding: 12px 0;
-      background: #8b5cf6;
-      border: none;
-      border-radius: 10px;
-      color: #ffffff;
+    .dots-bounce span {
+      display: inline-block;
+      animation: dotBounce 1.4s infinite ease-in-out both;
       font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background 0.15s, opacity 0.15s;
+      line-height: 1;
+      color: inherit;
     }
-    .admin-submit-btn:active {
-      opacity: 0.85;
+    .dots-bounce span:nth-child(1) { animation-delay: -0.32s; }
+    .dots-bounce span:nth-child(2) { animation-delay: -0.16s; }
+    .dots-bounce span:nth-child(3) { animation-delay: 0s; }
+    @keyframes dotBounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-4px); }
+    }
+    .err-msg {
+      color: #ff3b30;
+      font-size: 13px;
+      margin-top: 14px;
+      max-width: 80%;
+      text-align: center;
+      display: none;
+      line-height: 1.4;
     }
   </style>
 </head>
 <body>
-  <!-- 言語切替ボタン -->
-  <div class="lang-switcher">
-    <button type="button" id="btn-ja" class="lang-btn active" onclick="switchLang('ja')">JP</button>
-    <button type="button" id="btn-en" class="lang-btn" onclick="switchLang('en')">EN</button>
+  <div class="app-spinner" id="spinner"></div>
+  <div class="loader-text" id="loader-box">
+    <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
   </div>
-
-  <!-- ★ アイコンタップエリア -->
-  <div class="icon-wrapper" id="secret-icon-btn">
-    <div class="icon floating" id="main-icon">🚧</div>
-  </div>
-
-  <h1 id="m-title">システムメンテナンス中</h1>
-  <p id="m-desc">現在、iOS 27対応に向けた<br>プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。</p>
-
-  <!-- ★ 管理者バイパス用パスワードモーダル -->
-  <div class="admin-modal-overlay" id="admin-overlay" onclick="closeAdminModal()"></div>
-  <div class="admin-modal-dialog" id="admin-dialog">
-    <div class="modal-head">
-      <div class="modal-head-title">Admin Bypass Authentication</div>
-      <button type="button" class="modal-close-btn" onclick="closeAdminModal()">✕</button>
-    </div>
-    <form onsubmit="handleAdminSubmit(event)">
-      <input type="password" id="admin-pass-input" class="admin-pwd-input" maxlength="32" inputmode="numeric" autocomplete="off">
-      <div id="admin-err-msg" class="modal-err-text"></div>
-      <button type="submit" id="admin-btn" class="admin-submit-btn">Authenticate</button>
-    </form>
-  </div>
+  <div class="err-msg" id="err-text"></div>
 
   <script>
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
+
+    // ★ 新規デプロイされたURLに更新
     const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
-    
-    // ★ 正しい「1126」のSHA-256ハッシュ値に修正完了
-    const AUTH_HASH = '5817ae4948371f9b6b7d94615c0704e6a13ba5a773938351ebd832d0fcdbdf2f';
-
-    async function sha256(message) {
-      const msgBuffer = new TextEncoder().encode(message);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
 
     function getQueryParam(key) {
       const urlParams = new URLSearchParams(window.location.search);
@@ -255,105 +104,26 @@
         val = hashParams.get(key);
         if (val) return val;
       }
+
       return null;
     }
 
-    // アイコン5回連打判定
-    let tapCount = 0;
-    let tapResetTimer = null;
-    let isBypassing = false;
+    const appType = getQueryParam('app');
+    const isArchive = (appType === 'archive');
 
-    const iconBtn = document.getElementById('secret-icon-btn');
-    const iconEl = document.getElementById('main-icon');
-
-    function handleIconSecretTap(e) {
-      if (isBypassing) return;
-      if (e) e.preventDefault();
-
-      tapCount++;
-
-      iconEl.classList.remove('floating');
-      iconEl.classList.add('tapped');
-      setTimeout(() => {
-        iconEl.classList.remove('tapped');
-        if (!isBypassing && tapCount === 0) iconEl.classList.add('floating');
-      }, 100);
-
-      clearTimeout(tapResetTimer);
-      tapResetTimer = setTimeout(() => {
-        tapCount = 0;
-        if (!isBypassing) iconEl.classList.add('floating');
-      }, 2000);
-
-      if (tapCount >= 5) {
-        tapCount = 0;
-        clearTimeout(tapResetTimer);
-        openAdminModal();
-      }
+    if (isArchive) {
+      document.getElementById('status-text').innerText = 'リダイレクト中';
+      document.getElementById('page-title').innerText = 'リダイレクト中';
+    } else {
+      document.getElementById('status-text').innerText = 'リダイレクト中';
+      document.getElementById('page-title').innerText = 'リダイレクト中';
     }
 
-    iconBtn.addEventListener('touchstart', handleIconSecretTap, { passive: false });
-    iconBtn.addEventListener('click', handleIconSecretTap);
+    window.onload = function() {
+      main();
+    };
 
-    function openAdminModal() {
-      document.getElementById('admin-overlay').classList.add('active');
-      document.getElementById('admin-dialog').classList.add('active');
-      const input = document.getElementById('admin-pass-input');
-      input.value = '';
-      document.getElementById('admin-err-msg').innerText = '';
-      setTimeout(() => input.focus(), 150);
-    }
-
-    function closeAdminModal() {
-      document.getElementById('admin-overlay').classList.remove('active');
-      document.getElementById('admin-dialog').classList.remove('active');
-      document.getElementById('admin-pass-input').value = '';
-      document.getElementById('admin-err-msg').innerText = '';
-    }
-
-    async function handleAdminSubmit(e) {
-      if (e) e.preventDefault();
-      const input = document.getElementById('admin-pass-input');
-      const err = document.getElementById('admin-err-msg');
-      const btn = document.getElementById('admin-btn');
-      
-      // 全角数字や空白を自動で半角に整える
-      const val = input.value.trim().normalize('NFKC');
-
-      btn.disabled = true;
-
-      const inputHash = await sha256(val);
-
-      if (inputHash === AUTH_HASH) {
-        isBypassing = true;
-        err.innerText = '';
-        btn.innerText = 'Verifying...';
-        
-        if (navigator.vibrate) {
-          try { navigator.vibrate([40, 60, 40]); } catch (err) {}
-        }
-
-        setTimeout(() => {
-          executeBypassRedirect();
-        }, 300);
-      } else {
-        btn.disabled = false;
-        err.innerText = 'Invalid passcode';
-        input.value = '';
-        input.focus();
-        if (navigator.vibrate) {
-          try { navigator.vibrate(100); } catch (err) {}
-        }
-      }
-      return false;
-    }
-
-    async function executeBypassRedirect() {
-      const appType = getQueryParam('app');
-      const isArchive = (appType === 'archive');
-      const dateTarget = getQueryParam('target') || '';
-      const baseUrl = isArchive ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
-
+    async function main() {
       try {
         await liff.init({ liffId: MY_LIFF_ID });
 
@@ -365,48 +135,27 @@
         const profile = await liff.getProfile();
         const lineUid = profile.userId;
 
+        if (!lineUid) {
+          throw new Error('LINE UIDの取得に失敗しました');
+        }
+
+        const dateTarget = getQueryParam('target') || '';
+        const baseUrl = isArchive ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
+
         const separator = baseUrl.includes('?') ? '&' : '?';
-        let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid || '')}`;
+        let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid)}`;
         if (dateTarget) {
           targetUrl += `&target=${encodeURIComponent(dateTarget)}`;
         }
 
         window.location.replace(targetUrl);
+
       } catch (err) {
-        window.location.replace(baseUrl);
-      }
-    }
-
-    // 辞書オブジェクト
-    const texts = {
-      ja: {
-        pageTitle: "現在、利用できません",
-        title: "システムメンテナンス中",
-        desc: "現在、iOS 27対応に向けた<br>プログラムの修正作業を行っております。<br><br>メンテナンスの完了は <strong>9月18日 22時頃</strong> を予定しております。<br>ご不便をおかけいたしますが、作業完了まで<br>今しばらくお待ちください。"
-      },
-      en: {
-        pageTitle: "Service Unavailable",
-        title: "Under Scheduled Maintenance",
-        desc: "We are currently performing system updates<br>for iOS 27 support.<br><br>Maintenance is scheduled to finish around<br><strong>Sep 18 at 22:00</strong>.<br><br>We apologize for the inconvenience<br>and appreciate your patience."
-      }
-    };
-
-    function switchLang(lang) {
-      if (isBypassing) return;
-      const data = texts[lang] || texts.ja;
-      document.documentElement.lang = lang;
-      document.getElementById('page-title').innerText = data.pageTitle;
-      document.getElementById('m-title').innerText = data.title;
-      document.getElementById('m-desc').innerHTML = data.desc;
-
-      const btnJa = document.getElementById('btn-ja');
-      const btnEn = document.getElementById('btn-en');
-      if (lang === 'en') {
-        btnJa.classList.remove('active');
-        btnEn.classList.add('active');
-      } else {
-        btnJa.classList.add('active');
-        btnEn.classList.remove('active');
+        document.getElementById('spinner').style.display = 'none';
+        document.getElementById('loader-box').style.display = 'none';
+        const errEl = document.getElementById('err-text');
+        errEl.innerText = '認証に失敗しました: ' + (err.message || err);
+        errEl.style.display = 'block';
       }
     }
   </script>
