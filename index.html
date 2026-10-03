@@ -79,8 +79,12 @@
   <script>
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
 
-    // ★ 新規デプロイされたURLに更新
-    const URL_TODAY_VIEWER = 'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec';
+    // ★ Today Viewer：A/Bをランダム振り分け
+    // ★ 将来C/Dを追加するときは、この配列へURLを追加するだけ
+    const URL_TODAY_VIEWERS = [
+      'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec',
+      'https://script.google.com/macros/s/AKfycbw6Uuc5cpxgfh9btzdnIQqKdxiQBoj3NtsNz6O1ciFRe1iV6f0vP6t4syUmBpj0qeWnag/exec'
+    ];
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
 
     function getQueryParam(key) {
@@ -106,6 +110,24 @@
       }
 
       return null;
+    }
+
+    // ★ Today Viewerを開くたびに1ノードをランダム選択
+    // ★ 3軸・4軸化してもこの関数は変更不要
+    function chooseTodayViewerUrl() {
+      if (URL_TODAY_VIEWERS.length === 1) {
+        return URL_TODAY_VIEWERS[0];
+      }
+
+      const range = 0x100000000;
+      const limit = Math.floor(range / URL_TODAY_VIEWERS.length) * URL_TODAY_VIEWERS.length;
+      const randomValue = new Uint32Array(1);
+
+      do {
+        crypto.getRandomValues(randomValue);
+      } while (randomValue[0] >= limit);
+
+      return URL_TODAY_VIEWERS[randomValue[0] % URL_TODAY_VIEWERS.length];
     }
 
     const appType = getQueryParam('app');
@@ -140,7 +162,7 @@
         }
 
         const dateTarget = getQueryParam('target') || '';
-        const baseUrl = isArchive ? URL_ARCHIVE_SITE : URL_TODAY_VIEWER;
+        const baseUrl = isArchive ? URL_ARCHIVE_SITE : chooseTodayViewerUrl();
 
         const separator = baseUrl.includes('?') ? '&' : '?';
         let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid)}`;
