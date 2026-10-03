@@ -8,8 +8,8 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     html, body {
-      background-color: #000;
-      color: #fff;
+      background-color: #f7f7f4;
+      color: #334155;
       height: 100vh;
       overflow: hidden;
       display: flex;
@@ -20,8 +20,8 @@
     .app-spinner {
       width: 36px;
       height: 36px;
-      border: 3px solid rgba(255, 255, 255, 0.2);
-      border-top: 3px solid #fff;
+      border: 3px solid rgba(15, 23, 42, 0.12);
+      border-top: 3px solid #334155;
       border-radius: 50%;
       animation: spin 0.75s linear infinite;
     }
@@ -32,7 +32,7 @@
     .loader-text {
       font-size: 13px;
       font-weight: 600;
-      color: #aaa;
+      color: #64748b;
       letter-spacing: 0.3px;
       display: flex;
       align-items: center;
@@ -79,11 +79,14 @@
   <script>
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
 
-    // ★ Today Viewer：A/Bをランダム振り分け
-    // ★ 将来C/Dを追加するときは、この配列へURLを追加するだけ
+    // ★ Today Viewer：A/B/C/D/Eをランダム振り分け
+    // ★ 配列内の5ノードから、Today Viewerを開くたびに1ノードを均等ランダム選択
     const URL_TODAY_VIEWERS = [
       'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec',
-      'https://script.google.com/macros/s/AKfycbw6Uuc5cpxgfh9btzdnIQqKdxiQBoj3NtsNz6O1ciFRe1iV6f0vP6t4syUmBpj0qeWnag/exec'
+      'https://script.google.com/macros/s/AKfycbw6Uuc5cpxgfh9btzdnIQqKdxiQBoj3NtsNz6O1ciFRe1iV6f0vP6t4syUmBpj0qeWnag/exec',
+      'https://script.google.com/macros/s/AKfycbyDqAsRHAxszKWQ7DqFmdHZ90o1y_IjQUh2Wn2dmu4yLCa667UW62PgiTwz0YpDkf0/exec',
+      'https://script.google.com/macros/s/AKfycbxtbkySOLD2IZDZa_MZGSs2qH2kRlsWn14aeWFE-MxkjgN16wP76ulSY3UjXOsfnWcCvw/exec',
+      'https://script.google.com/macros/s/AKfycbz71CgulJNkiOuKYEngrqZSa9G47NWtRLazCXGhk-S2fuiAhqtKNbXTuFCQnDcoxgJsAA/exec'
     ];
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
 
@@ -113,7 +116,7 @@
     }
 
     // ★ Today Viewerを開くたびに1ノードをランダム選択
-    // ★ 3軸・4軸化してもこの関数は変更不要
+    // ★ URL_TODAY_VIEWERSの件数が増減しても、この関数は変更不要
     function chooseTodayViewerUrl() {
       if (URL_TODAY_VIEWERS.length === 1) {
         return URL_TODAY_VIEWERS[0];
