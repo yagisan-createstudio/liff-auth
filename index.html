@@ -165,12 +165,22 @@
         }
 
         const dateTarget = getQueryParam('target') || '';
+
+        // ★ ⑤-3-27 LINE配信から受け取ったランチ/ディナー指定をToday Viewerへ引き継ぐ
+        // L / D 以外は無視し、従来どおりViewer側のデフォルト動作に任せる
+        const mealParamRaw = (getQueryParam('meal') || '').toUpperCase();
+        const mealParam = (mealParamRaw === 'L' || mealParamRaw === 'D') ? mealParamRaw : '';
+
         const baseUrl = isArchive ? URL_ARCHIVE_SITE : chooseTodayViewerUrl();
 
         const separator = baseUrl.includes('?') ? '&' : '?';
         let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid)}`;
         if (dateTarget) {
           targetUrl += `&target=${encodeURIComponent(dateTarget)}`;
+        }
+        // Archiveは既存仕様を完全維持。mealはToday Viewer A/B/C/D/Eにだけ渡す。
+        if (!isArchive && mealParam) {
+          targetUrl += `&meal=${encodeURIComponent(mealParam)}`;
         }
 
         window.location.replace(targetUrl);
