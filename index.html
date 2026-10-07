@@ -117,6 +117,12 @@
 
     // ★ Today Viewerを開くたびに1ノードをランダム選択
     // ★ URL_TODAY_VIEWERSの件数が増減しても、この関数は変更不要
+    function getRequestedViewerIndex() {
+      const viewer = String(getQueryParam('viewer') || '').trim().toUpperCase();
+      const map = { A: 0, B: 1, C: 2, D: 3, E: 4 };
+      return Object.prototype.hasOwnProperty.call(map, viewer) ? map[viewer] : -1;
+    }
+
     function chooseTodayViewerUrl() {
       if (URL_TODAY_VIEWERS.length === 1) {
         return URL_TODAY_VIEWERS[0];
@@ -171,7 +177,12 @@
         const mealParamRaw = (getQueryParam('meal') || '').toUpperCase();
         const mealParam = (mealParamRaw === 'L' || mealParamRaw === 'D') ? mealParamRaw : '';
 
-        const baseUrl = isArchive ? URL_ARCHIVE_SITE : chooseTodayViewerUrl();
+        // ★ S2: @owner手動指定時はランダム振り分けをスキップ。
+        // viewer=A〜E はルーティング指定だけで、権限は指定先ViewerがLINE UIDから通常判定する。
+        const requestedViewerIndex = getRequestedViewerIndex();
+        const baseUrl = isArchive
+          ? URL_ARCHIVE_SITE
+          : (requestedViewerIndex >= 0 ? URL_TODAY_VIEWERS[requestedViewerIndex] : chooseTodayViewerUrl());
 
         const separator = baseUrl.includes('?') ? '&' : '?';
         let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid)}`;
