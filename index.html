@@ -88,6 +88,8 @@
       'https://script.google.com/macros/s/AKfycbxtbkySOLD2IZDZa_MZGSs2qH2kRlsWn14aeWFE-MxkjgN16wP76ulSY3UjXOsfnWcCvw/exec',
       'https://script.google.com/macros/s/AKfycbz71CgulJNkiOuKYEngrqZSa9G47NWtRLazCXGhk-S2fuiAhqtKNbXTuFCQnDcoxgJsAA/exec'
     ];
+    // ★ テスト用Viewer Xは通常のランダム振り分け対象に含めない
+    const URL_TEST_VIEWER = 'https://script.google.com/macros/s/AKfycbyVFWDOot7UPJgwVaexYqTw_oNN1tvdIn7ILxSg7s3Myg3ES1QhPEuJRP2WzhSN_Jm3Ag/exec';
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
 
     function getQueryParam(key) {
@@ -180,9 +182,11 @@
         // ★ S2: @owner手動指定時はランダム振り分けをスキップ。
         // viewer=A〜E はルーティング指定だけで、権限は指定先ViewerがLINE UIDから通常判定する。
         const requestedViewerIndex = getRequestedViewerIndex();
+        // ★ viewer=X指定時だけテスト用Viewer Xへ移動。通常のランダム振り分けはA〜Eのまま。
+        const isTestViewer = !isArchive && String(getQueryParam('viewer') || '').trim().toUpperCase() === 'X';
         const baseUrl = isArchive
           ? URL_ARCHIVE_SITE
-          : (requestedViewerIndex >= 0 ? URL_TODAY_VIEWERS[requestedViewerIndex] : chooseTodayViewerUrl());
+          : (isTestViewer ? URL_TEST_VIEWER : (requestedViewerIndex >= 0 ? URL_TODAY_VIEWERS[requestedViewerIndex] : chooseTodayViewerUrl()));
 
         const separator = baseUrl.includes('?') ? '&' : '?';
         let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid)}`;
