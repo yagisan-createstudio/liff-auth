@@ -58,6 +58,10 @@
       0%, 80%, 100% { transform: translateY(0); }
       40% { transform: translateY(-4px); }
     }
+    .closure-notice { display:none; width:min(440px,calc(100vw - 40px)); padding:32px 26px; background:#fff; border:1px solid #e2e8f0; border-radius:24px; text-align:center; box-shadow:0 12px 40px rgba(15,23,42,.06); }
+    .closure-notice h1 { font-size:21px; line-height:1.6; margin-bottom:18px; }
+    .closure-notice p { font-size:14px; line-height:1.9; color:#64748b; }
+    .closure-notice p + p { margin-top:14px; }
     .err-msg {
       color: #ff3b30;
       font-size: 13px;
@@ -75,6 +79,12 @@
     <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
   </div>
   <div class="err-msg" id="err-text"></div>
+  <main class="closure-notice" id="closure-notice" aria-labelledby="closure-title">
+    <h1 id="closure-title">サービス終了のご案内</h1>
+    <p>アーカイブ閲覧サイトは、<br>2026年10月31日をもちまして<br>サービスを終了いたしました。</p>
+    <p>これまでご利用いただき、<br>ありがとうございました。</p>
+    <p>ID・パスワード・アイコンの変更は、<br>日次レポートビューアーの<br>「マイページ」から行えます。</p>
+  </main>
 
   <script>
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
@@ -146,9 +156,16 @@
     const appType = getQueryParam('app');
     const isArchive = (appType === 'archive');
 
+    function showArchiveClosure() {
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('loader-box').style.display = 'none';
+      document.getElementById('err-text').style.display = 'none';
+      document.getElementById('closure-notice').style.display = 'block';
+      document.getElementById('page-title').innerText = 'サービス終了のご案内';
+    }
+
     if (isArchive) {
-      document.getElementById('status-text').innerText = 'リダイレクト中';
-      document.getElementById('page-title').innerText = 'リダイレクト中';
+      showArchiveClosure();
     } else {
       document.getElementById('status-text').innerText = 'リダイレクト中';
       document.getElementById('page-title').innerText = 'リダイレクト中';
@@ -159,6 +176,8 @@
     };
 
     async function main() {
+      // Archive entry is closed before authentication, profile access or navigation.
+      if (isArchive) { showArchiveClosure(); return; }
       try {
         await liff.init({ liffId: MY_LIFF_ID });
 
