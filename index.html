@@ -107,37 +107,26 @@
     .maintenance-art { flex:0 0 240px; width:240px; height:240px; }
     .maintenance-footer { padding-top:20px; border-top:1px solid #dce4ec; display:flex; justify-content:space-between; gap:12px; color:#7b8a9a; font-size:10px; letter-spacing:.03em; }
     @media(max-width:680px) { .maintenance-shell { padding:max(24px,env(safe-area-inset-top)) 25px max(24px,env(safe-area-inset-bottom)); } .maintenance-content { flex-direction:column-reverse; align-items:flex-start; justify-content:center; gap:30px; padding:44px 0; } .maintenance-art { align-self:center; flex-basis:150px; width:150px; height:150px; } .maintenance-page h1 { font-size:28px; } .maintenance-tag { margin-bottom:18px; } .maintenance-footer { flex-direction:column; gap:6px; } }
+    .maintenance-page { background:#fff; color:#333; }
+    .maintenance-simple { width:calc(100% - 48px); max-width:600px; margin:15vh auto 0; text-align:center; padding-bottom:40px; }
+    .maintenance-code { font-family:Arial,sans-serif; font-size:100px; font-weight:700; line-height:1.1; color:#333; }
+    .maintenance-simple h1 { font-family:Arial,sans-serif; font-size:24px; line-height:1.5; letter-spacing:0; margin:14px 0 32px; font-weight:400; }
+    .maintenance-simple p { font-size:13px; line-height:2; color:#666; }
+    .maintenance-simple hr { border:0; border-top:1px solid #ddd; margin:32px 0 20px; }
+    .maintenance-simple small { font-size:11px; color:#999; }
   </style>
 </head>
 <body>
   <section class="maintenance-page" id="maintenance-page" aria-labelledby="maintenance-title">
-    <div class="maintenance-shell">
-      <header class="maintenance-brand">
-        <svg class="maintenance-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 19V5h14v14H5Z" stroke="currentColor" stroke-width="1.5"/><path d="M9 9h6M9 13h6M9 17h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        <span>日次レポートビューアー</span>
-      </header>
-      <div class="maintenance-content">
-        <div class="maintenance-copy">
-          <div class="maintenance-tag">MAINTENANCE</div>
-          <h1 id="maintenance-title">ただいま、メンテナンスを<br>行っています。</h1>
-          <p class="maintenance-description">ご利用の皆さまには、ご不便をおかけしております。<br>恐れ入りますが、時間をおいて<br>再度アクセスしていただきますようお願いいたします。</p>
-          <div class="maintenance-note">メンテナンス中は、こちらの入口から<br>レポートをご覧いただけません。</div>
-          <button class="maintenance-reload" type="button" onclick="window.location.reload()">ページを再読み込み</button>
-        </div>
-        <svg class="maintenance-art" viewBox="0 0 240 240" fill="none" aria-hidden="true">
-          <circle cx="120" cy="120" r="112" fill="#edf2f6"/>
-          <rect x="54" y="55" width="126" height="144" rx="14" fill="#fff" stroke="#c6d2df" stroke-width="2"/>
-          <path d="M78 84h52M78 101h77M78 118h61" stroke="#c0cddb" stroke-width="5" stroke-linecap="round"/>
-          <rect x="78" y="140" width="13" height="31" rx="3" fill="#b9cbdd"/><rect x="101" y="131" width="13" height="40" rx="3" fill="#8fa9c3"/><rect x="124" y="147" width="13" height="24" rx="3" fill="#d0dce8"/>
-          <circle cx="174" cy="67" r="34" fill="#223b57" stroke="#f8fafc" stroke-width="6"/>
-          <path d="M174 49v18l12 8" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="55" cy="48" r="5" fill="#b8c9d9"/><circle cx="197" cy="181" r="7" fill="#d5c7ae"/>
-        </svg>
-      </div>
-      <footer class="maintenance-footer"><span>日次レポート配信システム</span><span>ご理解とご協力をお願いいたします。</span></footer>
+    <div class="maintenance-simple">
+      <div class="maintenance-code">503</div>
+      <h1 id="maintenance-title">Service Unavailable</h1>
+      <p>ただいまメンテナンス中です。</p>
+      <p>時間をおいて、再度アクセスしてください。</p>
+      <hr>
+      <small>日次レポートビューアー</small>
     </div>
   </section>
-
   <div class="app-spinner" id="spinner"></div>
   <div class="loader-text" id="loader-box">
     <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
