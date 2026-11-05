@@ -18,6 +18,13 @@
       align-items: center;
     }
     .test-loader { position:fixed; inset:0; z-index:15; background:#f7f7f4; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .test-diagnostic { position:fixed; right:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); z-index:18; width:320px; max-width:calc(100vw - 20px); max-height:35vh; max-height:35dvh; overflow:auto; -webkit-overflow-scrolling:touch; padding:10px 12px; border:1px solid #cbd5e1; border-radius:12px; background:#f7f7f4; color:#334155; box-shadow:0 2px 12px #0002; font-size:11px; line-height:1.6; text-align:left; }
+    .test-diagnostic[hidden] { display:none; }
+    .test-diagnostic header { display:flex; align-items:center; justify-content:space-between; gap:8px; position:sticky; top:-10px; background:#f7f7f4; }
+    .test-diagnostic button { min-width:44px; min-height:44px; border:1px solid #cbd5e1; border-radius:8px; background:white; color:#334155; font-size:12px; }
+    .test-diagnostic p { margin-top:6px; }
+    .test-diagnostic dt { margin-top:6px; }
+    .test-diagnostic dd { font-weight:600; font-variant-numeric:tabular-nums; }
     .app-spinner {
       width: 36px;
       height: 36px;
@@ -215,6 +222,51 @@
 
     let npsViewerFrame_=null,npsLineCredential_='',npsPendingReceiver_=null,npsXWaitTimer_=null,npsXDiagnostic_=false;
     let npsTestTiming_=null;
+    // Separate from the legacy X diagnostic flag: A/B always use real LINE authentication.
+    let npsTestDiagnostic_=false,npsTestDiagnosticClosed_=false;
+    function npsTestDiagnosticUpdate_(){
+      if(!npsTestDiagnostic_||npsTestDiagnosticClosed_)return;
+      try {
+        let panel=document.getElementById('test-diagnostic');
+        if(!panel){
+          panel=document.createElement('aside');panel.id='test-diagnostic';panel.className='test-diagnostic';
+          panel.setAttribute('aria-label','読み込み診断');
+          const header=document.createElement('header');
+          const title=document.createElement('strong');title.textContent='読み込み診断';header.append(title);
+          const close=document.createElement('button');close.type='button';close.textContent='閉じる';
+          close.addEventListener('click',function(){npsTestDiagnosticClosed_=true;panel.remove();});
+          header.append(close);panel.append(header);
+          const list=document.createElement('dl');
+          const labels=[
+            ['liffInitMs','LIFF初期化：init呼び出し → 完了'],
+            ['iframeAddedMs','iframe追加：入口処理開始 → 要素追加直前'],
+            ['iframeLoadMs','iframe load：要素追加直前 → 初回load'],
+            ['iframeReadyMs','接続準備：要素追加直前 → 初回の検証済みready'],
+            ['totalMs','入口経過：入口処理開始 → 初回の検証済みready']
+          ];
+          labels.forEach(function(row){
+            const dt=document.createElement('dt');dt.textContent=row[1];list.append(dt);
+            const dd=document.createElement('dd');dd.id='test-diag-'+row[0];list.append(dd);
+          });
+          panel.append(list);
+          ['このページ単位の計測です。ログインでページが移ると計測はやり直します。',
+           'readyは接続準備通知です。認証完了・PDF表示完了ではありません。',
+           'イベントは前後・重複する場合があります。各時間は重なりがあり、合算できません。PDF表示完了時刻は入口では取得していません。'
+          ].forEach(function(text){const p=document.createElement('p');p.textContent=text;panel.append(p);});
+          document.body.append(panel);
+        }
+        const t=npsTestTiming_;if(!t)return;
+        const show=(name,end,start)=>{
+          document.getElementById('test-diag-'+name).textContent=
+            Number.isFinite(end)&&Number.isFinite(start)?Math.round(Math.max(0,end-start)*10)/10+' ms':'待機中／未計測';
+        };
+        show('liffInitMs',t.liffEnded,t.liffStarted);
+        show('iframeAddedMs',t.iframeAdded,t.started);
+        show('iframeLoadMs',t.iframeLoaded,t.iframeAdded);
+        show('iframeReadyMs',t.ready,t.iframeAdded);
+        show('totalMs',t.ready,t.started);
+      }catch(e){ /* Diagnostics must not interrupt authentication. No exception details are displayed or logged. */ }
+    }
     function npsTestNow_(){
       try { const n=performance.now(); return Number.isFinite(n)?n:null; }
       catch(e) { return null; }
@@ -244,9 +296,16 @@
         elapsed('totalMs',t.ready,t.started);
         console.info(label,out);
       }catch(e){ /* Timing must never interrupt authentication or rendering. */ }
+      if(npsTestDiagnostic_)npsTestDiagnosticUpdate_();
     }
     function npsXShowStatus_(text,small){
-      if(!small)npsTestLoader_(false);
+      if(!small){
+        npsTestLoader_(false);
+        if(npsTestDiagnostic_){
+          npsTestDiagnosticClosed_=true;
+          const panel=document.getElementById('test-diagnostic');if(panel)panel.remove();
+        }
+      }
       let el=document.getElementById('nps-x-status');
       if(!el){el=document.createElement('div');el.id='nps-x-status';document.body.append(el);}
       el.textContent=text;
@@ -314,14 +373,18 @@
       npsLineCredential_='';
       npsTestLoader_(true);
       npsTestTiming_={viewer:viewer,started:npsTestNow_()};
+      npsTestDiagnostic_=getQueryParam('diagnostic')==='1';
+      if(npsTestDiagnostic_)npsTestDiagnosticUpdate_();
       try {
         npsTestTiming_.liffStarted=npsTestNow_();
         await liff.init({liffId:MY_LIFF_ID});
         npsTestTiming_.liffEnded=npsTestNow_();
+        if(npsTestDiagnostic_)npsTestDiagnosticUpdate_();
         // Construct a fresh allowlisted URL after SDK initialization. Never copy
         // OAuth parameters, tokens, hashes or arbitrary redirect destinations.
         const returnUrl = new URL('https://yagisan-createstudio.github.io/liff-auth/test/');
         returnUrl.searchParams.set('viewer', viewer);
+        if(npsTestDiagnostic_)returnUrl.searchParams.set('diagnostic','1');
         const requestedMeal = String(getQueryParam('meal') || '').toUpperCase();
         const requestedTarget = getQueryParam('target') || '';
         if (requestedMeal === 'L' || requestedMeal === 'D') returnUrl.searchParams.set('meal', requestedMeal);
@@ -366,6 +429,7 @@
         });
         npsTestTiming_.iframeAdded=npsTestNow_();
         document.body.append(npsViewerFrame_);
+        if(npsTestDiagnostic_)npsTestDiagnosticUpdate_();
         npsXWaitTimer_=setTimeout(function(){
           if(npsPendingReceiver_)return;
           npsLineCredential_='';
@@ -394,3 +458,4 @@
   </script>
 </body>
 </html>
+
