@@ -17,6 +17,7 @@
       justify-content: center;
       align-items: center;
     }
+    .test-loader { position:fixed; inset:0; z-index:15; background:#f7f7f4; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     .app-spinner {
       width: 36px;
       height: 36px;
@@ -93,9 +94,11 @@
   </style>
 </head>
 <body>
+  <div class="test-loader" id="test-loader">
   <div class="app-spinner" id="spinner"></div>
   <div class="loader-text" id="loader-box">
     <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
+  </div>
   </div>
   <div class="err-msg" id="err-text"></div>
   <main class="closure-notice" id="closure-notice" aria-labelledby="closure-title">
@@ -211,7 +214,39 @@
     };
 
     let npsViewerFrame_=null,npsLineCredential_='',npsPendingReceiver_=null,npsXWaitTimer_=null,npsXDiagnostic_=false;
+    let npsTestTiming_=null;
+    function npsTestNow_(){
+      try { const n=performance.now(); return Number.isFinite(n)?n:null; }
+      catch(e) { return null; }
+    }
+    function npsTestLoader_(visible){
+      document.getElementById('test-loader').style.display=visible?'flex':'none';
+      document.getElementById('spinner').style.display=visible?'block':'none';
+      document.getElementById('loader-box').style.display=visible?'flex':'none';
+      if(visible){
+        document.getElementById('status-text').innerText='リダイレクト中';
+        const status=document.getElementById('nps-x-status');if(status)status.remove();
+      }
+    }
+    function npsTestLogTiming_(label){
+      // ready means the iframe can receive messages, NOT successful authentication.
+      // Log only the fixed viewer label and elapsed milliseconds; never URLs or credentials.
+      try {
+        const t=npsTestTiming_;if(!t)return;
+        const out={viewer:t.viewer};
+        const elapsed=(name,end,start)=>{
+          if(Number.isFinite(end)&&Number.isFinite(start))out[name]=Math.round(Math.max(0,end-start)*10)/10;
+        };
+        elapsed('liffInitMs',t.liffEnded,t.liffStarted);
+        elapsed('iframeAddedMs',t.iframeAdded,t.started);
+        elapsed('iframeLoadMs',t.iframeLoaded,t.iframeAdded);
+        elapsed('iframeReadyMs',t.ready,t.iframeAdded);
+        elapsed('totalMs',t.ready,t.started);
+        console.info(label,out);
+      }catch(e){ /* Timing must never interrupt authentication or rendering. */ }
+    }
     function npsXShowStatus_(text,small){
+      if(!small)npsTestLoader_(false);
       let el=document.getElementById('nps-x-status');
       if(!el){el=document.createElement('div');el.id='nps-x-status';document.body.append(el);}
       el.textContent=text;
@@ -238,7 +273,11 @@
       npsPendingReceiver_={source:event.source,origin:event.origin,challenge:m.challenge};
       if(first){
         if(npsXDiagnostic_)npsXShowStatus_('Xの画面との接続を確認しました（LINE認証は未実施）',true);
-        else {const status=document.getElementById('nps-x-status');if(status)status.remove();}
+        else {
+          npsTestLoader_(false);
+          const status=document.getElementById('nps-x-status');if(status)status.remove();
+          if(npsTestTiming_){npsTestTiming_.ready=npsTestNow_();npsTestLogTiming_('[LIFF test timing]');}
+        }
       }
       npsSendCredential_();
     });
@@ -273,9 +312,12 @@
       npsXDiagnostic_=false;
       npsPendingReceiver_=null;
       npsLineCredential_='';
-      npsXShowStatus_('LINEのログイン状態を確認しています…',false);
+      npsTestLoader_(true);
+      npsTestTiming_={viewer:viewer,started:npsTestNow_()};
       try {
+        npsTestTiming_.liffStarted=npsTestNow_();
         await liff.init({liffId:MY_LIFF_ID});
+        npsTestTiming_.liffEnded=npsTestNow_();
         // Construct a fresh allowlisted URL after SDK initialization. Never copy
         // OAuth parameters, tokens, hashes or arbitrary redirect destinations.
         const returnUrl = new URL('https://yagisan-createstudio.github.io/liff-auth/test/');
@@ -308,13 +350,21 @@
         const target=getQueryParam('target')||'';
         if(meal==='L'||meal==='D')url.searchParams.set('meal',meal);
         if(target)url.searchParams.set('target',target);
-        npsXShowStatus_('ビューアーを読み込んでいます…',false);
+        npsTestLoader_(true);
         npsViewerFrame_=document.createElement('iframe');
         npsViewerFrame_.title='日次レポートビューアー';
         npsViewerFrame_.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;background:white;z-index:5';
         npsViewerFrame_.referrerPolicy='no-referrer';
         npsViewerFrame_.allow='camera; fullscreen';
         npsViewerFrame_.src=url.href;
+        npsViewerFrame_.addEventListener('load',function(){
+          const t=npsTestTiming_;
+          if(t&&!Object.prototype.hasOwnProperty.call(t,'iframeLoaded')){
+            t.iframeLoaded=npsTestNow_();
+            npsTestLogTiming_('[LIFF test iframe load timing]');
+          }
+        });
+        npsTestTiming_.iframeAdded=npsTestNow_();
         document.body.append(npsViewerFrame_);
         npsXWaitTimer_=setTimeout(function(){
           if(npsPendingReceiver_)return;
