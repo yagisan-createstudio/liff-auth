@@ -209,7 +209,13 @@
       main();
     };
 
-    let npsViewerFrame_=null,npsLineCredential_='',npsPendingReceiver_=null;
+    let npsViewerFrame_=null,npsLineCredential_='',npsPendingReceiver_=null,npsXWaitTimer_=null,npsXDiagnostic_=false;
+    function npsXShowStatus_(text,small){
+      let el=document.getElementById('nps-x-status');
+      if(!el){el=document.createElement('div');el.id='nps-x-status';document.body.append(el);}
+      el.textContent=text;
+      el.style.cssText=small?'position:fixed;top:0;left:0;right:0;padding:8px;background:#f0edf8;color:#62537c;font:12px system-ui;text-align:center;z-index:20':'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:28px;background:#f7f7f4;color:#334155;font:14px/1.8 system-ui;text-align:center;white-space:pre-line;z-index:20';
+    }
     function npsReceiverBelongsToViewer_(source){
       if(!npsViewerFrame_||!source)return false;
       let w=source;
@@ -226,24 +232,38 @@
     window.addEventListener('message',function(event){
       if(!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(event.origin)||!npsReceiverBelongsToViewer_(event.source))return;
       const m=event.data;if(!m||m.type!=='nps-viewer-ready-v2'||!/^[a-f0-9]{64}$/.test(m.challenge||''))return;
-      npsPendingReceiver_={source:event.source,origin:event.origin,challenge:m.challenge};npsSendCredential_();
+      if(npsXWaitTimer_){clearTimeout(npsXWaitTimer_);npsXWaitTimer_=null;}
+      const first=!npsPendingReceiver_;
+      npsPendingReceiver_={source:event.source,origin:event.origin,challenge:m.challenge};
+      if(first){
+        if(npsXDiagnostic_)npsXShowStatus_('Xの画面との接続を確認しました（LINE認証は未実施）',true);
+        else {const status=document.getElementById('nps-x-status');if(status)status.remove();}
+      }
+      npsSendCredential_();
     });
     async function npsOpenViewerX_(){
       try{
+        npsXDiagnostic_=getQueryParam('diagnostic')==='1';
+        npsXShowStatus_(npsXDiagnostic_?'Xの画面接続を確認しています…\nこの確認ではLINE認証を実行しません。':'LINEのログイン状態を確認しています…',false);
+        if(!npsXDiagnostic_){
+          await liff.init({liffId:MY_LIFF_ID});
+          if(!liff.isLoggedIn()){liff.login();return;}
+          npsLineCredential_=liff.getAccessToken();if(!npsLineCredential_)throw new Error('LINEから開き直してください');
+          npsXShowStatus_('ビューアーXを読み込んでいます…',false);
+        }
         const url=new URL(URL_TEST_VIEWER),meal=String(getQueryParam('meal')||'').toUpperCase();
         if(meal==='L'||meal==='D')url.searchParams.set('meal',meal);
         npsViewerFrame_=document.createElement('iframe');npsViewerFrame_.title='Viewer X 検証用';
         npsViewerFrame_.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;background:white;z-index:5';
         npsViewerFrame_.referrerPolicy='no-referrer';npsViewerFrame_.allow='camera; fullscreen';npsViewerFrame_.src=url.href;
         document.body.append(npsViewerFrame_);
-        await liff.init({liffId:MY_LIFF_ID});
-        if(!liff.isLoggedIn()){liff.login();return;}
-        npsLineCredential_=liff.getAccessToken();if(!npsLineCredential_)throw new Error('LINEから開き直してください');
-        npsSendCredential_();
+        npsXWaitTimer_=setTimeout(function(){
+          if(npsPendingReceiver_)return;
+          npsXShowStatus_('Xの画面との接続を確認できませんでした。\nA/Bの閲覧には影響しません。\nこの画面を閉じてLINEから開き直してください。\n確認コード：X_FRAME_READY_TIMEOUT',false);
+        },45000);
       }catch(error){
         npsLineCredential_='';if(npsViewerFrame_)npsViewerFrame_.remove();npsViewerFrame_=null;
-        document.getElementById('spinner').style.display='none';document.getElementById('loader-box').style.display='none';
-        const el=document.getElementById('err-text');el.textContent=error&&error.message||'検証画面を開けませんでした';el.style.display='block';
+        npsXShowStatus_(error&&error.message||'検証画面を開けませんでした',false);
       }
     }
     async function main() {
