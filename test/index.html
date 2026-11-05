@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title id="page-title">Viewer A/B 検証用入口</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    html, body {
+      background-color: #f7f7f4;
+      color: #334155;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .app-spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(15, 23, 42, 0.12);
+      border-top: 3px solid #334155;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .loader-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    .dots-bounce {
+      display: inline-flex;
+      margin-left: 2px;
+      gap: 1.5px;
+    }
+    .dots-bounce span {
+      display: inline-block;
+      animation: dotBounce 1.4s infinite ease-in-out both;
+      font-size: 14px;
+      line-height: 1;
+      color: inherit;
+    }
+    .dots-bounce span:nth-child(1) { animation-delay: -0.32s; }
+    .dots-bounce span:nth-child(2) { animation-delay: -0.16s; }
+    .dots-bounce span:nth-child(3) { animation-delay: 0s; }
+    @keyframes dotBounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-4px); }
+    }
+    /* Archive closure: scoped full-page notice; viewer routing screen is unchanged. */
+    .closure-notice { display:none; position:fixed; inset:0; z-index:10; overflow:auto; background:radial-gradient(ellipse at 12% 0%,#f6e9ed 0,transparent 52%),radial-gradient(ellipse at 100% 90%,#eeeaf2 0,transparent 45%),#f8f7f5; color:#30333b; -webkit-overflow-scrolling:touch; }
+    .closure-shell { width:min(100% - 40px,520px); margin:0 auto; padding: max(38px,env(safe-area-inset-top)) 0 max(28px,env(safe-area-inset-bottom)); min-height:100%; display:flex; flex-direction:column; justify-content:center; }
+    .closure-brand { display:flex; align-items:center; gap:10px; margin:0 0 24px 4px; font-size:12px; font-weight:650; letter-spacing:.07em; color:#73646d; }
+    .closure-brand svg { width:25px; height:25px; color:#a15876; }
+    .closure-card { background:rgba(255,255,255,.94); border:1px solid #fff; border-radius:28px; padding:36px 30px 30px; box-shadow:0 18px 60px -28px rgba(81,49,65,.22),0 1px 4px rgba(81,49,65,.03); }
+    .closure-eyebrow { display:flex; align-items:center; gap:8px; color:#99617a; font-size:10px; font-weight:700; letter-spacing:.16em; margin-bottom:20px; }
+    .closure-eyebrow::before { content:''; width:20px; height:1px; background:currentColor; }
+    .closure-notice h1 { font-size:clamp(25px,6vw,32px); letter-spacing:-.045em; line-height:1.5; font-weight:700; margin:0 0 20px; }
+    .closure-intro { font-size:14px; line-height:2; color:#6d6d77; text-wrap:pretty; }
+    .closure-date { display:flex; align-items:center; justify-content:space-between; gap:12px; border-top:1px solid #eee9ec; border-bottom:1px solid #eee9ec; padding:17px 0; margin:27px 0 23px; }
+    .closure-date dt { font-size:12px; color:#82747d; }
+    .closure-date dd { font-size:14px; font-weight:600; letter-spacing:.02em; font-variant-numeric:tabular-nums; }
+    .closure-thanks { font-size:14px; line-height:1.95; color:#55535d; margin-bottom:28px; }
+    .closure-next { border-radius:18px; background:#f6f3f5; padding:20px; }
+    .closure-next h2 { font-size:12px; font-weight:650; color:#866477; display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    .closure-next svg { width:17px; height:17px; flex-shrink:0; }
+    .closure-next p { font-size:13px; line-height:1.95; color:#77707a; }
+    .closure-next strong { color:#4e4651; font-weight:650; }
+    .closure-path { display:flex; align-items:center; gap:8px; margin-top:14px; font-size:12px; color:#66515f; font-weight:600; flex-wrap:wrap; }
+    .closure-path span:last-child { padding:5px 10px; border:1px solid #e6dce2; border-radius:8px; background:#fff; }
+    .closure-footer { text-align:center; color:#a299a0; font-size:10px; letter-spacing:.12em; margin-top:24px; }
+    @media(max-width:360px) { .closure-shell { width:calc(100% - 28px); } .closure-card { padding:28px 23px 24px; } .closure-next { padding:17px; } }
+    .err-msg {
+      color: #ff3b30;
+      font-size: 13px;
+      margin-top: 14px;
+      max-width: 80%;
+      text-align: center;
+      display: none;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-spinner" id="spinner"></div>
+  <div class="loader-text" id="loader-box">
+    <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
+  </div>
+  <div class="err-msg" id="err-text"></div>
+  <main class="closure-notice" id="closure-notice" aria-labelledby="closure-title">
+    <div class="closure-shell">
+      <div class="closure-brand">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="6" width="16" height="15" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 3h8M8 10h8M8 14h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>日次レポート · アーカイブ</span>
+      </div>
+      <article class="closure-card">
+        <div class="closure-eyebrow">SERVICE CLOSED</div>
+        <h1 id="closure-title">アーカイブ閲覧サイト<br>サービス終了のご案内</h1>
+        <p class="closure-intro">アーカイブ閲覧サイトは、<br>2026年10月31日をもちまして、<br>サービスを終了いたしました。</p>
+        <dl class="closure-date"><dt>サービス終了日</dt><dd><time datetime="2026-10-31">2026年10月31日</time></dd></dl>
+        <p class="closure-thanks">これまでご利用いただき、<br>誠にありがとうございました。</p>
+        <section class="closure-next" aria-labelledby="closure-next-title">
+          <h2 id="closure-next-title"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M12 11v6M12 7v.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>アカウント設定について</h2>
+          <p>ID・パスワード・アイコンの変更は、<strong>日次レポートビューアーの「マイページ」</strong>から引き続き行えます。</p>
+          <div class="closure-path"><span>日次レポートビューアー</span><span aria-hidden="true">›</span><span>マイページ</span></div>
+        </section>
+      </article>
+      <footer class="closure-footer">日次レポート配信システム</footer>
+    </div>
+  </main>
+
+  <script>
+    const MY_LIFF_ID = '2011370236-GhC6I5kJ';
+
+    // ★ Today Viewer：A/B/C/D/Eをランダム振り分け
+    //@A https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec
+    //@B https://script.google.com/macros/s/AKfycbw6Uuc5cpxgfh9btzdnIQqKdxiQBoj3NtsNz6O1ciFRe1iV6f0vP6t4syUmBpj0qeWnag/exec
+    // ★ 配列内の5ノードから、Today Viewerを開くたびに1ノードを均等ランダム選択
+    const URL_TODAY_VIEWERS = [
+      'https://script.google.com/macros/s/AKfycbwGoy2EVxnThg_AryE4A4Vr7kFsXgnRTZjsrLUgsCXC8IAYSLPVEqu69EJzrNmKlk_k/exec',
+      'https://script.google.com/macros/s/AKfycbw6Uuc5cpxgfh9btzdnIQqKdxiQBoj3NtsNz6O1ciFRe1iV6f0vP6t4syUmBpj0qeWnag/exec',
+      '',
+      '',
+      ''
+    ];
+    // ★ テスト用Viewer Xは通常のランダム振り分け対象に含めない
+    const URL_TEST_VIEWER = 'https://script.google.com/macros/s/AKfycbyVFWDOot7UPJgwVaexYqTw_oNN1tvdIn7ILxSg7s3Myg3ES1QhPEuJRP2WzhSN_Jm3Ag/exec';
+    const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
+
+    function getQueryParam(key) {
+      const urlParams = new URLSearchParams(window.location.search);
+      let val = urlParams.get(key);
+      if (val) return val;
+
+      const liffState = urlParams.get('liff.state');
+      if (liffState) {
+        // URLSearchParams has already decoded liff.state once.
+        const decodedState = liffState;
+        const stateQueryIndex = decodedState.indexOf('?');
+        if (stateQueryIndex !== -1) {
+          const stateParams = new URLSearchParams(decodedState.substring(stateQueryIndex));
+          val = stateParams.get(key);
+          if (val) return val;
+        }
+      }
+
+      if (window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        val = hashParams.get(key);
+        if (val) return val;
+      }
+
+      return null;
+    }
+
+    // ★ Today Viewerを開くたびに1ノードをランダム選択
+    // ★ URL_TODAY_VIEWERSの件数が増減しても、この関数は変更不要
+    function getRequestedViewerIndex() {
+      const viewer = String(getQueryParam('viewer') || '').trim().toUpperCase();
+      const map = { A: 0, B: 1, C: 2, D: 3, E: 4 };
+      return Object.prototype.hasOwnProperty.call(map, viewer) ? map[viewer] : -1;
+    }
+
+    function chooseTodayViewerUrl() {
+      if (URL_TODAY_VIEWERS.length === 1) {
+        return URL_TODAY_VIEWERS[0];
+      }
+
+      const range = 0x100000000;
+      const limit = Math.floor(range / URL_TODAY_VIEWERS.length) * URL_TODAY_VIEWERS.length;
+      const randomValue = new Uint32Array(1);
+
+      do {
+        crypto.getRandomValues(randomValue);
+      } while (randomValue[0] >= limit);
+
+      return URL_TODAY_VIEWERS[randomValue[0] % URL_TODAY_VIEWERS.length];
+    }
+
+    const appType = getQueryParam('app');
+    const isArchive = (appType === 'archive');
+
+    function showArchiveClosure() {
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('loader-box').style.display = 'none';
+      document.getElementById('err-text').style.display = 'none';
+      document.getElementById('closure-notice').style.display = 'block';
+      document.getElementById('page-title').innerText = 'サービス終了のご案内';
+    }
+
+    if (isArchive) {
+      showArchiveClosure();
+    } else {
+      document.getElementById('status-text').innerText = 'リダイレクト中';
+      document.getElementById('page-title').innerText = 'リダイレクト中';
+    }
+
+    window.onload = function() {
+      main();
+    };
+
+    let npsViewerFrame_=null,npsLineCredential_='',npsPendingReceiver_=null,npsXWaitTimer_=null,npsXDiagnostic_=false;
+    function npsXShowStatus_(text,small){
+      let el=document.getElementById('nps-x-status');
+      if(!el){el=document.createElement('div');el.id='nps-x-status';document.body.append(el);}
+      el.textContent=text;
+      el.style.cssText=small?'position:fixed;top:0;left:0;right:0;padding:8px;background:#f0edf8;color:#62537c;font:12px system-ui;text-align:center;z-index:20':'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:28px;background:#f7f7f4;color:#334155;font:14px/1.8 system-ui;text-align:center;white-space:pre-line;z-index:20';
+    }
+    function npsReceiverBelongsToViewer_(source){
+      if(!npsViewerFrame_||!source)return false;
+      let w=source;
+      try{for(let i=0;i<4;i++){if(w===npsViewerFrame_.contentWindow)return true;const next=w.parent;if(next===w)break;w=next;}}catch(e){}
+      return false;
+    }
+    function npsSendCredential_(){
+      const receiver=npsPendingReceiver_;
+      if(!receiver||!npsReceiverBelongsToViewer_(receiver.source))return;
+      receiver.source.postMessage({type:'nps-gateway-context-v2',challenge:receiver.challenge},receiver.origin);
+      if(!npsLineCredential_)return;
+      receiver.source.postMessage({type:'nps-line-credential-v2',challenge:receiver.challenge,accessToken:npsLineCredential_},receiver.origin);
+    }
+    window.addEventListener('message',function(event){
+      if(!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(event.origin)||!npsReceiverBelongsToViewer_(event.source))return;
+      const m=event.data;if(!m||m.type!=='nps-viewer-ready-v2'||!/^[a-f0-9]{64}$/.test(m.challenge||''))return;
+      if(npsXWaitTimer_){clearTimeout(npsXWaitTimer_);npsXWaitTimer_=null;}
+      const first=!npsPendingReceiver_;
+      npsPendingReceiver_={source:event.source,origin:event.origin,challenge:m.challenge};
+      if(first){
+        if(npsXDiagnostic_)npsXShowStatus_('Xの画面との接続を確認しました（LINE認証は未実施）',true);
+        else {const status=document.getElementById('nps-x-status');if(status)status.remove();}
+      }
+      npsSendCredential_();
+    });
+    async function npsOpenViewerX_(){
+      try{
+        npsXDiagnostic_=getQueryParam('diagnostic')==='1';
+        npsXShowStatus_(npsXDiagnostic_?'Xの画面接続を確認しています…\nこの確認ではLINE認証を実行しません。':'LINEのログイン状態を確認しています…',false);
+        if(!npsXDiagnostic_){
+          await liff.init({liffId:MY_LIFF_ID});
+          if(!liff.isLoggedIn()){liff.login();return;}
+          npsLineCredential_=liff.getAccessToken();if(!npsLineCredential_)throw new Error('LINEから開き直してください');
+          npsXShowStatus_('ビューアーXを読み込んでいます…',false);
+        }
+        const url=new URL(URL_TEST_VIEWER),meal=String(getQueryParam('meal')||'').toUpperCase();
+        if(meal==='L'||meal==='D')url.searchParams.set('meal',meal);
+        npsViewerFrame_=document.createElement('iframe');npsViewerFrame_.title='Viewer X 検証用';
+        npsViewerFrame_.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;background:white;z-index:5';
+        npsViewerFrame_.referrerPolicy='no-referrer';npsViewerFrame_.allow='camera; fullscreen';npsViewerFrame_.src=url.href;
+        document.body.append(npsViewerFrame_);
+        npsXWaitTimer_=setTimeout(function(){
+          if(npsPendingReceiver_)return;
+          npsXShowStatus_('Xの画面との接続を確認できませんでした。\nA/Bの閲覧には影響しません。\nこの画面を閉じてLINEから開き直してください。\n確認コード：X_FRAME_READY_TIMEOUT',false);
+        },45000);
+      }catch(error){
+        npsLineCredential_='';if(npsViewerFrame_)npsViewerFrame_.remove();npsViewerFrame_=null;
+        npsXShowStatus_(error&&error.message||'検証画面を開けませんでした',false);
+      }
+    }
+    // A/B: preserve the existing random selection, but present the selected viewer
+    // inside the same LIFF gateway as Viewer X. The access token is never put in a URL.
+    async function npsOpenEmbeddedAB_(baseUrl, viewer) {
+      npsXDiagnostic_=false;
+      npsPendingReceiver_=null;
+      npsLineCredential_='';
+      npsXShowStatus_('LINEのログイン状態を確認しています…',false);
+      try {
+        await liff.init({liffId:MY_LIFF_ID});
+        // Construct a fresh allowlisted URL after SDK initialization. Never copy
+        // OAuth parameters, tokens, hashes or arbitrary redirect destinations.
+        const returnUrl = new URL('https://yagisan-createstudio.github.io/liff-auth/test/');
+        returnUrl.searchParams.set('viewer', viewer);
+        const requestedMeal = String(getQueryParam('meal') || '').toUpperCase();
+        const requestedTarget = getQueryParam('target') || '';
+        if (requestedMeal === 'L' || requestedMeal === 'D') returnUrl.searchParams.set('meal', requestedMeal);
+        if (requestedTarget) returnUrl.searchParams.set('target', requestedTarget);
+        const loginKey = 'nps-test-entry-login-v1:' + viewer;
+        if (!liff.isLoggedIn()) {
+          // Per-tab, test-only guard. If storage is unavailable, fail closed
+          // instead of starting an authentication flow we cannot bound.
+          let previous;
+          try { previous = Number(sessionStorage.getItem(loginKey) || 0); }
+          catch (e) { throw new Error('ログインの繰り返しを防止できません。ブラウザの保存設定をご確認ください。'); }
+          if (previous && Date.now() - previous < 300000) {
+            throw new Error('LINEログインを完了できませんでした。自動再試行を停止しました。5分後に検証用URLを開き直してください。');
+          }
+          try { sessionStorage.setItem(loginKey, String(Date.now())); }
+          catch (e) { throw new Error('ログイン状態を保存できません。ブラウザの保存設定をご確認ください。'); }
+          liff.login({redirectUri:returnUrl.href});
+          return;
+        }
+        try { sessionStorage.removeItem(loginKey); } catch (e) {}
+        const credential=liff.getAccessToken();
+        if(!credential)throw new Error('LINE認証情報を取得できませんでした。LINEから開き直してください');
+        npsLineCredential_=credential;
+        const url=new URL(baseUrl);
+        const meal=String(getQueryParam('meal')||'').toUpperCase();
+        const target=getQueryParam('target')||'';
+        if(meal==='L'||meal==='D')url.searchParams.set('meal',meal);
+        if(target)url.searchParams.set('target',target);
+        npsXShowStatus_('ビューアーを読み込んでいます…',false);
+        npsViewerFrame_=document.createElement('iframe');
+        npsViewerFrame_.title='日次レポートビューアー';
+        npsViewerFrame_.style.cssText='position:fixed;inset:0;width:100%;height:100%;border:0;background:white;z-index:5';
+        npsViewerFrame_.referrerPolicy='no-referrer';
+        npsViewerFrame_.allow='camera; fullscreen';
+        npsViewerFrame_.src=url.href;
+        document.body.append(npsViewerFrame_);
+        npsXWaitTimer_=setTimeout(function(){
+          if(npsPendingReceiver_)return;
+          npsLineCredential_='';
+          npsXShowStatus_('ビューアーの認証接続を確認できませんでした。\nこの画面を閉じ、LINEから開き直してください。\n確認コード：AB_FRAME_READY_TIMEOUT',false);
+        },45000);
+      }catch(error){
+        npsLineCredential_='';
+        if(npsViewerFrame_)npsViewerFrame_.remove();
+        npsViewerFrame_=null;
+        npsXShowStatus_(error&&error.message||'ビューアーを開けませんでした',false);
+      }
+    }
+
+    // Isolated test entry: never route a test request to a production viewer.
+    const TEST_A_URL = 'https://script.google.com/macros/s/AKfycbzlsw-2kV94RrMRiv1rE1sKTUiu7-0Cff4E5WSPZ3NfWdZE8WrLErjNZl4mGSkfWbE6/exec';
+    const TEST_B_URL = 'https://script.google.com/macros/s/AKfycbyX5ib617RgFiOiPl2qeaO29ZsC53utVH-Z_BO0wP9TjinBq1eLexI8Naa2g9uaWivEVA/exec';
+    async function main() {
+      const viewer=String(getQueryParam('viewer')||'').trim().toUpperCase();
+      if(viewer!=='TEST_A'&&viewer!=='TEST_B'){
+        npsXShowStatus_('検証用入口です。\nviewer=TEST_A または viewer=TEST_B を指定してください。',false);
+        return;
+      }
+      return npsOpenEmbeddedAB_(viewer==='TEST_A'?TEST_A_URL:TEST_B_URL,viewer);
+    }
+
+  </script>
+</body>
+</html>
