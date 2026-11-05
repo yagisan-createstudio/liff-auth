@@ -90,9 +90,54 @@
       display: none;
       line-height: 1.4;
     }
+    .maintenance-page { display:none; position:fixed; inset:0; z-index:30; overflow:auto; background:#f8fafc; color:#172b43; -webkit-overflow-scrolling:touch; }
+    .maintenance-shell { max-width:1080px; min-height:100%; margin:auto; padding:32px 48px 24px; display:flex; flex-direction:column; }
+    .maintenance-brand { display:flex; align-items:center; gap:12px; font-size:14px; font-weight:650; letter-spacing:.04em; }
+    .maintenance-mark { width:32px; height:32px; padding:7px; border-radius:9px; color:white; background:#223b57; }
+    .maintenance-content { flex:1; display:flex; align-items:center; justify-content:space-between; gap:48px; padding:76px 0; }
+    .maintenance-copy { max-width:550px; }
+    .maintenance-tag { display:inline-flex; align-items:center; gap:8px; color:#506980; font-size:11px; font-weight:650; letter-spacing:.12em; margin-bottom:24px; }
+    .maintenance-tag::before { content:''; width:7px; height:7px; border-radius:50%; background:#aa8248; }
+    .maintenance-page h1 { margin:0 0 24px; font-size:clamp(28px,3.8vw,42px); font-weight:650; line-height:1.6; letter-spacing:-.035em; }
+    .maintenance-description { font-size:14px; line-height:2; color:#65768a; }
+    .maintenance-note { margin-top:28px; padding:17px 20px; border-left:2px solid #b6c4d2; background:#edf2f6; font-size:12px; line-height:1.9; color:#53677b; }
+    .maintenance-reload { margin-top:28px; padding:13px 23px; border:1px solid #c6d0db; border-radius:8px; background:white; color:#223b57; font-size:13px; font-weight:600; cursor:pointer; }
+    .maintenance-reload:hover { background:#edf2f6; }
+    .maintenance-reload:focus-visible { outline:3px solid #8ca7c2; outline-offset:4px; }
+    .maintenance-art { flex:0 0 240px; width:240px; height:240px; }
+    .maintenance-footer { padding-top:20px; border-top:1px solid #dce4ec; display:flex; justify-content:space-between; gap:12px; color:#7b8a9a; font-size:10px; letter-spacing:.03em; }
+    @media(max-width:680px) { .maintenance-shell { padding:max(24px,env(safe-area-inset-top)) 25px max(24px,env(safe-area-inset-bottom)); } .maintenance-content { flex-direction:column-reverse; align-items:flex-start; justify-content:center; gap:30px; padding:44px 0; } .maintenance-art { align-self:center; flex-basis:150px; width:150px; height:150px; } .maintenance-page h1 { font-size:28px; } .maintenance-tag { margin-bottom:18px; } .maintenance-footer { flex-direction:column; gap:6px; } }
   </style>
 </head>
 <body>
+  <section class="maintenance-page" id="maintenance-page" aria-labelledby="maintenance-title">
+    <div class="maintenance-shell">
+      <header class="maintenance-brand">
+        <svg class="maintenance-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 19V5h14v14H5Z" stroke="currentColor" stroke-width="1.5"/><path d="M9 9h6M9 13h6M9 17h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>日次レポートビューアー</span>
+      </header>
+      <div class="maintenance-content">
+        <div class="maintenance-copy">
+          <div class="maintenance-tag">MAINTENANCE</div>
+          <h1 id="maintenance-title">ただいま、メンテナンスを<br>行っています。</h1>
+          <p class="maintenance-description">ご利用の皆さまには、ご不便をおかけしております。<br>恐れ入りますが、時間をおいて<br>再度アクセスしていただきますようお願いいたします。</p>
+          <div class="maintenance-note">メンテナンス中は、こちらの入口から<br>レポートをご覧いただけません。</div>
+          <button class="maintenance-reload" type="button" onclick="window.location.reload()">ページを再読み込み</button>
+        </div>
+        <svg class="maintenance-art" viewBox="0 0 240 240" fill="none" aria-hidden="true">
+          <circle cx="120" cy="120" r="112" fill="#edf2f6"/>
+          <rect x="54" y="55" width="126" height="144" rx="14" fill="#fff" stroke="#c6d2df" stroke-width="2"/>
+          <path d="M78 84h52M78 101h77M78 118h61" stroke="#c0cddb" stroke-width="5" stroke-linecap="round"/>
+          <rect x="78" y="140" width="13" height="31" rx="3" fill="#b9cbdd"/><rect x="101" y="131" width="13" height="40" rx="3" fill="#8fa9c3"/><rect x="124" y="147" width="13" height="24" rx="3" fill="#d0dce8"/>
+          <circle cx="174" cy="67" r="34" fill="#223b57" stroke="#f8fafc" stroke-width="6"/>
+          <path d="M174 49v18l12 8" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="55" cy="48" r="5" fill="#b8c9d9"/><circle cx="197" cy="181" r="7" fill="#d5c7ae"/>
+        </svg>
+      </div>
+      <footer class="maintenance-footer"><span>日次レポート配信システム</span><span>ご理解とご協力をお願いいたします。</span></footer>
+    </div>
+  </section>
+
   <div class="app-spinner" id="spinner"></div>
   <div class="loader-text" id="loader-box">
     <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
@@ -121,6 +166,8 @@
   </main>
 
   <script>
+    // Set false to restore the existing production routing. Test entry is a separate file.
+    const NORMAL_ENTRY_MAINTENANCE = true;
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
 
     // ★ Today Viewer：A/B/C/D/Eをランダム振り分け
@@ -205,6 +252,18 @@
       document.getElementById('page-title').innerText = 'リダイレクト中';
     }
 
+    function showMaintenance_(){
+      document.getElementById('spinner').style.display='none';
+      document.getElementById('loader-box').style.display='none';
+      document.getElementById('err-text').style.display='none';
+      document.getElementById('maintenance-page').style.display='block';
+      document.getElementById('page-title').innerText='メンテナンス中｜日次レポートビューアー';
+    }
+    function normalEntryUnderMaintenance_(){
+      return NORMAL_ENTRY_MAINTENANCE && !isArchive && String(getQueryParam('viewer')||'').trim().toUpperCase()!=='X';
+    }
+    if(normalEntryUnderMaintenance_())showMaintenance_();
+
     window.onload = function() {
       main();
     };
@@ -270,6 +329,7 @@
       if(!isArchive&&String(getQueryParam('viewer')||'').trim().toUpperCase()==='X')return npsOpenViewerX_();
       // Archive entry is closed before authentication, profile access or navigation.
       if (isArchive) { showArchiveClosure(); return; }
+      if(normalEntryUnderMaintenance_()){showMaintenance_();return;}
       try {
         await liff.init({ liffId: MY_LIFF_ID });
 
@@ -324,4 +384,5 @@
   </script>
 </body>
 </html>
+
 
