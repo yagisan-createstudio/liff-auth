@@ -249,8 +249,29 @@
       document.getElementById('maintenance-page').style.display='block';
       document.getElementById('page-title').innerText='メンテナンス中｜日次レポートビューアー';
     }
+    // Only the SDK's test-path primary redirect may pass through maintenance.
+    // This selects a destination, never grants Viewer permissions.
+    function readTestLoginReturn_(){
+      try {
+        const state=new URLSearchParams(window.location.search).get('liff.state');
+        if(!state||!/^\/?test\//.test(state))return null;
+        const destination=new URL(state.replace(/^\//,''),'https://yagisan-createstudio.github.io/liff-auth/');
+        if(destination.origin!=='https://yagisan-createstudio.github.io'||destination.pathname!=='/liff-auth/test/')return null;
+        const viewer=destination.searchParams.get('viewer');
+        if(viewer!=='TEST_A'&&viewer!=='TEST_B')return null;
+        const safe=new URL('https://yagisan-createstudio.github.io/liff-auth/test/');
+        safe.searchParams.set('viewer',viewer);
+        const meal=destination.searchParams.get('meal');
+        if(meal==='L'||meal==='D')safe.searchParams.set('meal',meal);
+        const target=destination.searchParams.get('target');
+        if(target)safe.searchParams.set('target',target);
+        if(destination.searchParams.get('diagnostic')==='1')safe.searchParams.set('diagnostic','1');
+        return safe.href;
+      }catch(e){return null;}
+    }
+    const testLoginReturn_=readTestLoginReturn_();
     function normalEntryUnderMaintenance_(){
-      return NORMAL_ENTRY_MAINTENANCE && !isArchive && String(getQueryParam('viewer')||'').trim().toUpperCase()!=='X';
+      return NORMAL_ENTRY_MAINTENANCE && !testLoginReturn_ && !isArchive && String(getQueryParam('viewer')||'').trim().toUpperCase()!=='X';
     }
     if(normalEntryUnderMaintenance_())showMaintenance_();
 
@@ -319,6 +340,20 @@
       if(!isArchive&&String(getQueryParam('viewer')||'').trim().toUpperCase()==='X')return npsOpenViewerX_();
       // Archive entry is closed before authentication, profile access or navigation.
       if (isArchive) { showArchiveClosure(); return; }
+      if(testLoginReturn_){
+        try {
+          // Let the SDK consume its authentication parameters before changing URL.
+          await liff.init({liffId:MY_LIFF_ID});
+          window.location.replace(testLoginReturn_);
+        }catch(e){
+          document.getElementById('spinner').style.display='none';
+          document.getElementById('loader-box').style.display='none';
+          const error=document.getElementById('err-text');
+          error.innerText='検証用ページの認証復帰に失敗しました。検証用URLから開き直してください。';
+          error.style.display='block';
+        }
+        return;
+      }
       if(normalEntryUnderMaintenance_()){showMaintenance_();return;}
       try {
         await liff.init({ liffId: MY_LIFF_ID });
