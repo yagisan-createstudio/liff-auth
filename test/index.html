@@ -28,17 +28,30 @@
     .test-diagnostic p { margin-top:6px; }
     .test-diagnostic dt { margin-top:6px; }
     .test-diagnostic dd { font-weight:600; font-variant-numeric:tabular-nums; }
-    .app-spinner {
-      width: 36px;
-      height: 36px;
-      border: 3px solid rgba(15, 23, 42, 0.12);
-      border-top: 3px solid #334155;
-      border-radius: 50%;
-      animation: spin 0.75s linear infinite;
+    .test-launch-mark {
+      display: block;
+      width: min(60vw, 225px);
+      height: auto;
+      flex-shrink: 0;
+      color: #b80946;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    .test-launch-mark .ink {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 18;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: test-launch-rise .42s cubic-bezier(.22,.8,.3,1) var(--delay) both;
+    }
+    .test-launch-mark .viewer-word .ink { stroke-width: 7.3; }
+    @keyframes test-launch-rise {
+      from { transform: translateY(9px) scale(.93); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .test-launch-mark .ink { animation: none; }
     }
     .loader-text {
       font-size: 13px;
@@ -105,9 +118,16 @@
 </head>
 <body>
   <div class="test-loader" id="test-loader">
-  <div class="app-spinner" id="spinner"></div>
+  <svg id="spinner" class="test-launch-mark" viewBox="0 0 274 167" role="img" aria-label="NPS Viewer"><path class="ink rise" style="--delay:0s" d="M 28,83 V 23 L 80,83 V 23"/>
+<path class="ink rise" style="--delay:.25s" d="M 110,83 V 23 H 135 C 153,23 163,30 163,43 C 163,56 153,63 135,63 H 110"/>
+<path class="ink rise" style="--delay:.50s" d="M 244,29 C 226,17 197,20 192,34 C 185,54 235,48 242,66 C 250,85 209,94 188,79"/><g class="viewer-word"><path class="ink rise" style="--delay:.50s" d="M 50,113 L 63,145 L 76,113"/>
+<path class="ink rise" style="--delay:.40s" d="M 89,125 V 145 M 89,114 h .1"/>
+<path class="ink rise" style="--delay:.30s" d="M 102,135 H 119 C 119,122 103,121 102,134 C 100,147 112,150 120,143"/>
+<path class="ink rise" style="--delay:.20s" d="M 132,125 L 139,145 L 147,131 L 155,145 L 163,125"/>
+<path class="ink rise" style="--delay:.10s" d="M 175,135 H 192 C 192,122 176,121 175,134 C 173,147 185,150 193,143"/>
+<path class="ink rise" style="--delay:0s" d="M 207,145 V 125 M 207,135 C 210,128 215,125 223,125"/></g></svg>
   <div class="loader-text" id="loader-box">
-    <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
+    <span id="status-text">アプリを起動しています</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
   </div>
   </div>
   <div class="err-msg" id="err-text"></div>
@@ -215,7 +235,7 @@
     if (isArchive) {
       showArchiveClosure();
     } else {
-      document.getElementById('status-text').innerText = 'リダイレクト中';
+      document.getElementById('status-text').innerText = 'アプリを起動しています';
       document.getElementById('page-title').innerText = 'NPSビューア｜動作検証用';
     }
 
@@ -279,7 +299,7 @@
       document.getElementById('spinner').style.display=visible?'block':'none';
       document.getElementById('loader-box').style.display=visible?'flex':'none';
       if(visible){
-        document.getElementById('status-text').innerText='リダイレクト中';
+        document.getElementById('status-text').innerText='アプリを起動しています';
         const status=document.getElementById('nps-x-status');if(status)status.remove();
       }
     }
