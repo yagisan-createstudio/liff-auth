@@ -270,6 +270,12 @@
       }catch(e){return null;}
     }
     const testLoginReturn_=readTestLoginReturn_();
+    if(testLoginReturn_ && !isArchive){
+      const viewerConnection = document.createElement('link');
+      viewerConnection.rel = 'preconnect';
+      viewerConnection.href = 'https://script.google.com';
+      document.head.appendChild(viewerConnection);
+    }
     function normalEntryUnderMaintenance_(){
       return NORMAL_ENTRY_MAINTENANCE && !testLoginReturn_ && !isArchive && String(getQueryParam('viewer')||'').trim().toUpperCase()!=='X';
     }

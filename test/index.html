@@ -391,6 +391,10 @@
     // A/B: preserve the existing random selection, but present the selected viewer
     // inside the same LIFF gateway as Viewer X. The access token is never put in a URL.
     async function npsOpenEmbeddedAB_(baseUrl, viewer) {
+      const viewerConnection = document.createElement('link');
+      viewerConnection.rel = 'preconnect';
+      viewerConnection.href = 'https://script.google.com';
+      document.head.appendChild(viewerConnection);
       npsXDiagnostic_=false;
       npsPendingReceiver_=null;
       npsLineCredential_='';
