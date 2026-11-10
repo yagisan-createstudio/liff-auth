@@ -114,6 +114,13 @@
     .maintenance-simple p { font-size:13px; line-height:2; color:#666; }
     .maintenance-simple hr { border:0; border-top:1px solid #ddd; margin:32px 0 20px; }
     .maintenance-simple small { font-size:11px; color:#999; }
+    .production-diagnostic { position:fixed; right:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); z-index:25; width:320px; max-width:calc(100vw - 20px); max-height:35vh; max-height:35dvh; overflow:auto; -webkit-overflow-scrolling:touch; padding:10px 12px; border:1px solid #cbd5e1; border-radius:12px; background:#f7f7f4; color:#334155; box-shadow:0 2px 12px #0002; font-size:11px; line-height:1.6; text-align:left; }
+    .production-diagnostic[hidden] { display:none; }
+    .production-diagnostic header { display:flex; align-items:center; justify-content:space-between; gap:8px; position:sticky; top:-10px; background:#f7f7f4; }
+    .production-diagnostic button { min-width:44px; min-height:44px; border:1px solid #cbd5e1; border-radius:8px; background:white; color:#334155; font-size:12px; }
+    .production-diagnostic p { margin-top:6px; }
+    .production-diagnostic dt { margin-top:6px; }
+    .production-diagnostic dd { font-weight:600; font-variant-numeric:tabular-nums; }
   </style>
 </head>
 <body>
@@ -156,7 +163,7 @@
   </main>
 
   <script>
-    // Set false to restore the existing production routing. Test entry is a separate file.
+    // Maintenance still permits the explicit production verification links.
     const NORMAL_ENTRY_MAINTENANCE = true;
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
 
@@ -209,19 +216,20 @@
     }
 
     function chooseTodayViewerUrl() {
-      if (URL_TODAY_VIEWERS.length === 1) {
-        return URL_TODAY_VIEWERS[0];
+      const activeViewers = URL_TODAY_VIEWERS.filter(Boolean);
+      if (activeViewers.length === 1) {
+        return activeViewers[0];
       }
 
       const range = 0x100000000;
-      const limit = Math.floor(range / URL_TODAY_VIEWERS.length) * URL_TODAY_VIEWERS.length;
+      const limit = Math.floor(range / activeViewers.length) * activeViewers.length;
       const randomValue = new Uint32Array(1);
 
       do {
         crypto.getRandomValues(randomValue);
       } while (randomValue[0] >= limit);
 
-      return URL_TODAY_VIEWERS[randomValue[0] % URL_TODAY_VIEWERS.length];
+      return activeViewers[randomValue[0] % activeViewers.length];
     }
 
     const appType = getQueryParam('app');
@@ -270,14 +278,15 @@
       }catch(e){return null;}
     }
     const testLoginReturn_=readTestLoginReturn_();
-    if(testLoginReturn_ && !isArchive){
+    const productionCheck_ = getQueryParam('production') === '1';
+    if (!isArchive && (testLoginReturn_ || productionCheck_ || !NORMAL_ENTRY_MAINTENANCE)) {
       const viewerConnection = document.createElement('link');
       viewerConnection.rel = 'preconnect';
       viewerConnection.href = 'https://script.google.com';
       document.head.appendChild(viewerConnection);
     }
     function normalEntryUnderMaintenance_(){
-      return NORMAL_ENTRY_MAINTENANCE && !testLoginReturn_ && !isArchive && String(getQueryParam('viewer')||'').trim().toUpperCase()!=='X';
+      return NORMAL_ENTRY_MAINTENANCE && !productionCheck_ && !testLoginReturn_ && !isArchive && String(getQueryParam('viewer')||'').trim().toUpperCase()!=='X';
     }
     if(normalEntryUnderMaintenance_())showMaintenance_();
 
@@ -286,6 +295,55 @@
     };
 
     let npsViewerFrame_=null,npsLineCredential_='',npsPendingReceiver_=null,npsXWaitTimer_=null,npsXDiagnostic_=false;
+    let npsProductionTiming_=null;
+    let npsProductionDiagnostic_=false,npsProductionDiagnosticClosed_=false;
+    function npsProductionDiagnosticUpdate_(){
+      if(!npsProductionDiagnostic_||npsProductionDiagnosticClosed_)return;
+      try {
+        let panel=document.getElementById('production-diagnostic');
+        if(!panel){
+          panel=document.createElement('aside');panel.id='production-diagnostic';panel.className='production-diagnostic';
+          panel.setAttribute('aria-label','GitHub側の読み込み計測');
+          const header=document.createElement('header');
+          const title=document.createElement('strong');title.textContent='読み込み診断';header.append(title);
+          const close=document.createElement('button');close.type='button';close.textContent='閉じる';
+          close.addEventListener('click',function(){npsProductionDiagnosticClosed_=true;panel.remove();});
+          header.append(close);panel.append(header);
+          const list=document.createElement('dl');
+          const labels=[
+            ['liffInitMs','LIFF初期化：init呼び出し → 完了'],
+            ['iframeAddedMs','iframe追加：このページの読み込み開始 → 要素追加直前'],
+            ['iframeLoadMs','iframe load：要素追加直前 → 初回load'],
+            ['iframeReadyMs','接続準備：要素追加直前 → 初回の検証済みready'],
+            ['totalMs','入口経過：このページの読み込み開始 → 初回の検証済みready']
+          ];
+          labels.forEach(function(row){
+            const dt=document.createElement('dt');dt.textContent=row[1];list.append(dt);
+            const dd=document.createElement('dd');dd.id='production-diag-'+row[0];list.append(dd);
+          });
+          panel.append(list);
+          ['このページ単位の計測です。ログインでページが移ると計測はやり直します。',
+           'readyは接続準備通知です。認証完了・PDF表示完了ではありません。',
+           'イベントは前後・重複する場合があります。各時間は重なりがあり、合算できません。PDF表示完了時刻は入口では取得していません。'
+          ].forEach(function(text){const p=document.createElement('p');p.textContent=text;panel.append(p);});
+          document.body.append(panel);
+        }
+        const t=npsProductionTiming_;if(!t)return;
+        const show=(name,end,start)=>{
+          document.getElementById('production-diag-'+name).textContent=
+            Number.isFinite(end)&&Number.isFinite(start)?Math.round(Math.max(0,end-start)*10)/10+' ms':'待機中／未計測';
+        };
+        show('liffInitMs',t.liffEnded,t.liffStarted);
+        show('iframeAddedMs',t.iframeAdded,t.started);
+        show('iframeLoadMs',t.iframeLoaded,t.iframeAdded);
+        show('iframeReadyMs',t.ready,t.iframeAdded);
+        show('totalMs',t.ready,t.started);
+      }catch(e){ /* Diagnostics must not interrupt authentication. No exception details are displayed or logged. */ }
+    }
+    function npsProductionNow_(){
+      try { const n=performance.now(); return Number.isFinite(n)?n:null; }
+      catch(e) { return null; }
+    }
     function npsXShowStatus_(text,small){
       let el=document.getElementById('nps-x-status');
       if(!el){el=document.createElement('div');el.id='nps-x-status';document.body.append(el);}
@@ -316,6 +374,10 @@
         else {const status=document.getElementById('nps-x-status');if(status)status.remove();}
       }
       npsSendCredential_();
+      if (first && npsProductionTiming_) {
+        npsProductionTiming_.ready = npsProductionNow_();
+        npsProductionDiagnosticUpdate_();
+      }
     });
     async function npsOpenViewerX_(){
       try{
@@ -361,56 +423,83 @@
         return;
       }
       if(normalEntryUnderMaintenance_()){showMaintenance_();return;}
-      try {
-        await liff.init({ liffId: MY_LIFF_ID });
+      const requestedViewerIndex = getRequestedViewerIndex();
+      const baseUrl = requestedViewerIndex >= 0 ? URL_TODAY_VIEWERS[requestedViewerIndex] : chooseTodayViewerUrl();
+      if (!baseUrl) {
+        npsXShowStatus_('指定されたビューアーは利用できません。AまたはBを指定してください。', false);
+        return;
+      }
+      await npsOpenProduction_(baseUrl, 'ABCDE'[URL_TODAY_VIEWERS.indexOf(baseUrl)]);
+    }
 
+    async function npsOpenProduction_(baseUrl, viewer) {
+      npsProductionDiagnostic_ = getQueryParam('diagnostic') === '1';
+      if (npsProductionDiagnostic_) {
+        npsProductionTiming_ = {viewer, started:0};
+        npsProductionDiagnosticUpdate_();
+      }
+      try {
+        if (npsProductionTiming_) npsProductionTiming_.liffStarted = npsProductionNow_();
+        await liff.init({liffId:MY_LIFF_ID});
+        if (npsProductionTiming_) npsProductionTiming_.liffEnded = npsProductionNow_();
+        npsProductionDiagnosticUpdate_();
+
+        const meal = String(getQueryParam('meal') || '').toUpperCase();
+        const target = getQueryParam('target');
+        const loginKey = 'nps-production-entry-login-v1';
         if (!liff.isLoggedIn()) {
-          liff.login();
+          const previous = Number(sessionStorage.getItem(loginKey) || 0);
+          if (previous && Date.now() - previous < 300000) throw new Error('LINEログインを完了できませんでした。5分後に開き直してください。');
+          const returnUrl = new URL('https://yagisan-createstudio.github.io/liff-auth/');
+          if (productionCheck_) returnUrl.searchParams.set('production','1');
+          if (npsProductionDiagnostic_) returnUrl.searchParams.set('diagnostic','1');
+          if (getRequestedViewerIndex() >= 0) returnUrl.searchParams.set('viewer',viewer);
+          if (meal === 'L' || meal === 'D') returnUrl.searchParams.set('meal',meal);
+          if (target) returnUrl.searchParams.set('target',target);
+          sessionStorage.setItem(loginKey,String(Date.now()));
+          liff.login({redirectUri:returnUrl.href});
           return;
         }
+        try { sessionStorage.removeItem(loginKey); } catch (e) {}
+        const credential = liff.getAccessToken();
+        if (!credential) throw new Error('LINE認証情報を取得できませんでした。LINEから開き直してください。');
+        npsLineCredential_ = credential;
 
-        const profile = await liff.getProfile();
-        const lineUid = profile.userId;
-
-        if (!lineUid) {
-          throw new Error('LINE UIDの取得に失敗しました');
+        const url = new URL(baseUrl);
+        if (meal === 'L' || meal === 'D') url.searchParams.set('meal',meal);
+        if (target) url.searchParams.set('target',target);
+        npsXShowStatus_('アプリを起動しています…',false);
+        npsViewerFrame_ = document.createElement('iframe');
+        npsViewerFrame_.title = '日次レポートビューアー';
+        npsViewerFrame_.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;background:white;z-index:5';
+        npsViewerFrame_.referrerPolicy = 'no-referrer';
+        npsViewerFrame_.allow = 'camera; fullscreen';
+        npsViewerFrame_.src = url.href;
+        if (npsProductionTiming_) {
+          npsViewerFrame_.addEventListener('load',function(){
+            npsProductionTiming_.iframeLoaded = npsProductionNow_();
+            npsProductionDiagnosticUpdate_();
+          },{once:true});
+          npsProductionTiming_.iframeAdded = npsProductionNow_();
         }
-
-        const dateTarget = getQueryParam('target') || '';
-
-        // ★ ⑤-3-27 LINE配信から受け取ったランチ/ディナー指定をToday Viewerへ引き継ぐ
-        // L / D 以外は無視し、従来どおりViewer側のデフォルト動作に任せる
-        const mealParamRaw = (getQueryParam('meal') || '').toUpperCase();
-        const mealParam = (mealParamRaw === 'L' || mealParamRaw === 'D') ? mealParamRaw : '';
-
-        // ★ S2: @owner手動指定時はランダム振り分けをスキップ。
-        // viewer=A〜E はルーティング指定だけで、権限は指定先ViewerがLINE UIDから通常判定する。
-        const requestedViewerIndex = getRequestedViewerIndex();
-        // ★ viewer=X指定時だけテスト用Viewer Xへ移動。通常のランダム振り分けはA〜Eのまま。
-        const isTestViewer = !isArchive && String(getQueryParam('viewer') || '').trim().toUpperCase() === 'X';
-        const baseUrl = isArchive
-          ? URL_ARCHIVE_SITE
-          : (isTestViewer ? URL_TEST_VIEWER : (requestedViewerIndex >= 0 ? URL_TODAY_VIEWERS[requestedViewerIndex] : chooseTodayViewerUrl()));
-
-        const separator = baseUrl.includes('?') ? '&' : '?';
-        let targetUrl = `${baseUrl}${separator}line_uid=${encodeURIComponent(lineUid)}`;
-        if (dateTarget) {
-          targetUrl += `&target=${encodeURIComponent(dateTarget)}`;
-        }
-        // Archiveは既存仕様を完全維持。mealはToday Viewer A/B/C/D/Eにだけ渡す。
-        if (!isArchive && mealParam) {
-          targetUrl += `&meal=${encodeURIComponent(mealParam)}`;
-        }
-
-        window.location.replace(targetUrl);
-
-      } catch (err) {
-        document.getElementById('spinner').style.display = 'none';
-        document.getElementById('loader-box').style.display = 'none';
-        const errEl = document.getElementById('err-text');
-        errEl.innerText = '認証に失敗しました: ' + (err.message || err);
-        errEl.style.display = 'block';
+        document.body.append(npsViewerFrame_);
+        npsProductionDiagnosticUpdate_();
+        npsXWaitTimer_ = setTimeout(function(){
+          if (npsPendingReceiver_) return;
+          npsProductionError_();
+        },45000);
+      }catch(error){
+        npsProductionError_();
       }
+    }
+
+    function npsProductionError_(){
+      npsLineCredential_='';
+      if (npsViewerFrame_) npsViewerFrame_.remove();
+      npsViewerFrame_=null;
+      const panel=document.getElementById('production-diagnostic');
+      if (panel) panel.remove();
+      npsXShowStatus_('ビューアーの接続を確認できませんでした。LINEから開き直してください。',false);
     }
   </script>
 </body>
