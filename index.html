@@ -220,6 +220,11 @@
       ''
     ];
     // ★ テスト用Viewer Xは通常のランダム振り分け対象に含めない
+    // Same Apps Script deployments as the isolated /test/ entry.
+    const URL_TEST_AB_VIEWERS = [
+      'https://script.google.com/macros/s/AKfycbzlsw-2kV94RrMRiv1rE1sKTUiu7-0Cff4E5WSPZ3NfWdZE8WrLErjNZl4mGSkfWbE6/exec',
+      'https://script.google.com/macros/s/AKfycbyX5ib617RgFiOiPl2qeaO29ZsC53utVH-Z_BO0wP9TjinBq1eLexI8Naa2g9uaWivEVA/exec'
+    ];
     const URL_TEST_VIEWER = 'https://script.google.com/macros/s/AKfycbyVFWDOot7UPJgwVaexYqTw_oNN1tvdIn7ILxSg7s3Myg3ES1QhPEuJRP2WzhSN_Jm3Ag/exec';
     const URL_ARCHIVE_SITE = 'https://script.google.com/macros/s/AKfycbzR6JqzhXRHTchBWn1VfRefOoNi1IWYJ2sYMhXeUtMbbrc065cpBCC9AQ37w7teKji7/exec';
 
@@ -346,7 +351,7 @@
           panel=document.createElement('aside');panel.id='production-diagnostic';panel.className='production-diagnostic';
           panel.setAttribute('aria-label','GitHub側の読み込み計測');
           const header=document.createElement('header');
-          const title=document.createElement('strong');title.textContent='読み込み診断 · 本番'+npsProductionTiming_.viewer;header.append(title);
+          const title=document.createElement('strong');title.textContent='読み込み診断 · '+(npsProductionTiming_.useTestScript?'検証Script ':'本番')+npsProductionTiming_.viewer;header.append(title);
           const close=document.createElement('button');close.type='button';close.textContent='閉じる';
           close.addEventListener('click',function(){npsProductionDiagnosticClosed_=true;panel.remove();});
           header.append(close);panel.append(header);
@@ -472,22 +477,24 @@
       }
       if(normalEntryUnderMaintenance_()){showMaintenance_();return;}
       const requestedViewerIndex = getRequestedViewerIndex();
-      const baseUrl = requestedViewerIndex >= 0 ? URL_TODAY_VIEWERS[requestedViewerIndex] : chooseTodayViewerUrl();
+      const useTestScript = getQueryParam('script') === 'test';
+      const viewerUrls = useTestScript ? URL_TEST_AB_VIEWERS : URL_TODAY_VIEWERS;
+      const baseUrl = requestedViewerIndex >= 0 ? viewerUrls[requestedViewerIndex] : (useTestScript ? '' : chooseTodayViewerUrl());
       if (!baseUrl) {
         npsXShowStatus_('指定されたビューアーは利用できません。AまたはBを指定してください。', false);
         return;
       }
-      await npsOpenProduction_(baseUrl, 'ABCDE'[URL_TODAY_VIEWERS.indexOf(baseUrl)]);
+      await npsOpenProduction_(baseUrl, 'ABCDE'[viewerUrls.indexOf(baseUrl)], useTestScript);
     }
 
-    async function npsOpenProduction_(baseUrl, viewer) {
+    async function npsOpenProduction_(baseUrl, viewer, useTestScript) {
       const loader = document.getElementById('production-loader-template');
       document.body.append(loader.content.cloneNode(true));
       document.getElementById('spinner').style.display = 'none';
       document.getElementById('loader-box').style.display = 'none';
       document.getElementById('page-title').innerText = 'NPS Viewer';
       npsProductionDiagnostic_ = getQueryParam('diagnostic') === '1';
-      if (npsProductionDiagnostic_) npsProductionTiming_ = {viewer, started:0};
+      if (npsProductionDiagnostic_) npsProductionTiming_ = {viewer, useTestScript, started:0};
       npsProductionSetStage_('LIFFを初期化中');
       let failureMessage='LINEの初期化が完了しませんでした。';
       try {
@@ -507,13 +514,14 @@
 
         const meal = String(getQueryParam('meal') || '').toUpperCase();
         const target = getQueryParam('target');
-        const loginKey = 'nps-production-entry-login-v1';
+        const loginKey = useTestScript ? 'nps-production-test-script-login-v1' : 'nps-production-entry-login-v1';
         if (!liff.isLoggedIn()) {
           const previous = Number(sessionStorage.getItem(loginKey) || 0);
           if (previous && Date.now() - previous < 300000) throw new Error('LINEログインを完了できませんでした。5分後に開き直してください。');
           const returnUrl = new URL('https://yagisan-createstudio.github.io/liff-auth/');
           if (productionCheck_) returnUrl.searchParams.set('production','1');
           if (npsProductionDiagnostic_) returnUrl.searchParams.set('diagnostic','1');
+          if (useTestScript) returnUrl.searchParams.set('script','test');
           if (getRequestedViewerIndex() >= 0) returnUrl.searchParams.set('viewer',viewer);
           if (meal === 'L' || meal === 'D') returnUrl.searchParams.set('meal',meal);
           if (target) returnUrl.searchParams.set('target',target);
