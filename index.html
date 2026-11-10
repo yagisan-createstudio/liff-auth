@@ -114,7 +114,7 @@
     .maintenance-simple p { font-size:13px; line-height:2; color:#666; }
     .maintenance-simple hr { border:0; border-top:1px solid #ddd; margin:32px 0 20px; }
     .maintenance-simple small { font-size:11px; color:#999; }
-    .production-diagnostic { position:fixed; right:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); z-index:25; width:320px; max-width:calc(100vw - 20px); max-height:35vh; max-height:35dvh; overflow:auto; -webkit-overflow-scrolling:touch; padding:10px 12px; border:1px solid #cbd5e1; border-radius:12px; background:#f7f7f4; color:#334155; box-shadow:0 2px 12px #0002; font-size:11px; line-height:1.6; text-align:left; }
+    .production-diagnostic { position:fixed; right:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); z-index:35; width:320px; max-width:calc(100vw - 20px); max-height:35vh; max-height:35dvh; overflow:auto; -webkit-overflow-scrolling:touch; padding:10px 12px; border:1px solid #cbd5e1; border-radius:12px; background:#f7f7f4; color:#334155; box-shadow:0 2px 12px #0002; font-size:11px; line-height:1.6; text-align:left; }
     .production-diagnostic[hidden] { display:none; }
     .production-diagnostic header { display:flex; align-items:center; justify-content:space-between; gap:8px; position:sticky; top:-10px; background:#f7f7f4; }
     .production-diagnostic button { min-width:44px; min-height:44px; border:1px solid #cbd5e1; border-radius:8px; background:white; color:#334155; font-size:12px; }
@@ -230,10 +230,9 @@
 
       const liffState = urlParams.get('liff.state');
       if (liffState) {
-        const decodedState = decodeURIComponent(liffState);
-        const stateQueryIndex = decodedState.indexOf('?');
+        const stateQueryIndex = liffState.indexOf('?');
         if (stateQueryIndex !== -1) {
-          const stateParams = new URLSearchParams(decodedState.substring(stateQueryIndex));
+          const stateParams = new URLSearchParams(liffState.substring(stateQueryIndex));
           val = stateParams.get(key);
           if (val) return val;
         }
@@ -337,6 +336,7 @@
 
     let npsViewerFrame_=null,npsLineCredential_='',npsPendingReceiver_=null,npsXWaitTimer_=null,npsXDiagnostic_=false;
     let npsProductionTiming_=null;
+    let npsProductionStage_='';
     let npsProductionDiagnostic_=false,npsProductionDiagnosticClosed_=false;
     function npsProductionDiagnosticUpdate_(){
       if(!npsProductionDiagnostic_||npsProductionDiagnosticClosed_)return;
@@ -346,10 +346,11 @@
           panel=document.createElement('aside');panel.id='production-diagnostic';panel.className='production-diagnostic';
           panel.setAttribute('aria-label','GitHub側の読み込み計測');
           const header=document.createElement('header');
-          const title=document.createElement('strong');title.textContent='読み込み診断';header.append(title);
+          const title=document.createElement('strong');title.textContent='読み込み診断 · 本番'+npsProductionTiming_.viewer;header.append(title);
           const close=document.createElement('button');close.type='button';close.textContent='閉じる';
           close.addEventListener('click',function(){npsProductionDiagnosticClosed_=true;panel.remove();});
           header.append(close);panel.append(header);
+          const stage=document.createElement('p');stage.id='production-diag-stage';stage.setAttribute('role','status');panel.append(stage);
           const list=document.createElement('dl');
           const labels=[
             ['liffInitMs','LIFF初期化：init呼び出し → 完了'],
@@ -370,6 +371,7 @@
           document.body.append(panel);
         }
         const t=npsProductionTiming_;if(!t)return;
+        document.getElementById('production-diag-stage').textContent=npsProductionStage_;
         const show=(name,end,start)=>{
           document.getElementById('production-diag-'+name).textContent=
             Number.isFinite(end)&&Number.isFinite(start)?Math.round(Math.max(0,end-start)*10)/10+' ms':'待機中／未計測';
@@ -380,6 +382,10 @@
         show('iframeReadyMs',t.ready,t.iframeAdded);
         show('totalMs',t.ready,t.started);
       }catch(e){ /* Diagnostics must not interrupt authentication. No exception details are displayed or logged. */ }
+    }
+    function npsProductionSetStage_(stage){
+      npsProductionStage_=stage;
+      npsProductionDiagnosticUpdate_();
     }
     function npsProductionNow_(){
       try { const n=performance.now(); return Number.isFinite(n)?n:null; }
@@ -418,7 +424,7 @@
       npsSendCredential_();
       if (first && npsProductionTiming_) {
         npsProductionTiming_.ready = npsProductionNow_();
-        npsProductionDiagnosticUpdate_();
+        npsProductionSetStage_('ビューアーへの接続準備完了');
       }
     });
     async function npsOpenViewerX_(){
@@ -481,15 +487,23 @@
       document.getElementById('loader-box').style.display = 'none';
       document.getElementById('page-title').innerText = 'NPS Viewer';
       npsProductionDiagnostic_ = getQueryParam('diagnostic') === '1';
-      if (npsProductionDiagnostic_) {
-        npsProductionTiming_ = {viewer, started:0};
-        npsProductionDiagnosticUpdate_();
-      }
+      if (npsProductionDiagnostic_) npsProductionTiming_ = {viewer, started:0};
+      npsProductionSetStage_('LIFFを初期化中');
+      let failureMessage='LINEの初期化が完了しませんでした。';
       try {
         if (npsProductionTiming_) npsProductionTiming_.liffStarted = npsProductionNow_();
-        await liff.init({liffId:MY_LIFF_ID});
+        let initTimer;
+        try {
+          await Promise.race([
+            liff.init({liffId:MY_LIFF_ID}),
+            new Promise((_,reject)=>{initTimer=setTimeout(()=>reject(new Error('LIFF_INIT_TIMEOUT')),20000);})
+          ]);
+        }finally{
+          clearTimeout(initTimer);
+        }
         if (npsProductionTiming_) npsProductionTiming_.liffEnded = npsProductionNow_();
-        npsProductionDiagnosticUpdate_();
+        failureMessage='LINE認証を完了できませんでした。';
+        npsProductionSetStage_('LINEのログイン状態を確認中');
 
         const meal = String(getQueryParam('meal') || '').toUpperCase();
         const target = getQueryParam('target');
@@ -504,6 +518,7 @@
           if (meal === 'L' || meal === 'D') returnUrl.searchParams.set('meal',meal);
           if (target) returnUrl.searchParams.set('target',target);
           sessionStorage.setItem(loginKey,String(Date.now()));
+          npsProductionSetStage_('LINEログインへ移動中');
           liff.login({redirectUri:returnUrl.href});
           return;
         }
@@ -511,6 +526,7 @@
         const credential = liff.getAccessToken();
         if (!credential) throw new Error('LINE認証情報を取得できませんでした。LINEから開き直してください。');
         npsLineCredential_ = credential;
+        failureMessage='ビューアーを開けませんでした。';
 
         const url = new URL(baseUrl);
         if (meal === 'L' || meal === 'D') url.searchParams.set('meal',meal);
@@ -524,29 +540,29 @@
         if (npsProductionTiming_) {
           npsViewerFrame_.addEventListener('load',function(){
             npsProductionTiming_.iframeLoaded = npsProductionNow_();
-            npsProductionDiagnosticUpdate_();
+            if (npsPendingReceiver_) npsProductionDiagnosticUpdate_();
+            else npsProductionSetStage_('ビューアーの接続準備通知を待機中');
           },{once:true});
           npsProductionTiming_.iframeAdded = npsProductionNow_();
         }
+        npsProductionSetStage_('ビューアーを読み込み中');
         document.body.append(npsViewerFrame_);
-        npsProductionDiagnosticUpdate_();
         npsXWaitTimer_ = setTimeout(function(){
           if (npsPendingReceiver_) return;
-          npsProductionError_();
+          npsProductionError_('ビューアーから接続準備の通知が届きませんでした。');
         },45000);
       }catch(error){
-        npsProductionError_();
+        npsProductionError_(failureMessage);
       }
     }
 
-    function npsProductionError_(){
+    function npsProductionError_(message){
       document.getElementById('production-loader')?.remove();
       npsLineCredential_='';
       if (npsViewerFrame_) npsViewerFrame_.remove();
       npsViewerFrame_=null;
-      const panel=document.getElementById('production-diagnostic');
-      if (panel) panel.remove();
-      npsXShowStatus_('ビューアーの接続を確認できませんでした。LINEから開き直してください。',false);
+      npsProductionSetStage_(message);
+      npsXShowStatus_(message+'\nLINEから開き直してください。',false);
     }
   </script>
 </body>
