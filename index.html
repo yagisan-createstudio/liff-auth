@@ -147,6 +147,15 @@
     @media (prefers-reduced-motion: reduce) {
       .production-launch-mark .ink { animation: none; }
     }
+
+    /* C-1 depth transition: production splash only */
+    #production-loader .production-launch-mark,#production-loader .loader-text{transform-origin:center center}
+    #production-loader.nps-c1-finish .production-launch-mark,
+    #production-loader.nps-c1-finish .loader-text{animation:nps-c1-absorb .46s cubic-bezier(.64,.05,1,.55) forwards}
+    #production-loader.nps-c1-finish{animation:nps-c1-backdrop .24s ease-in-out .36s forwards;pointer-events:none}
+    @keyframes nps-c1-absorb{0%{transform:scale(1);opacity:1;filter:blur(0)}30%{transform:scale(1.045);opacity:1;filter:blur(0)}62%{transform:scale(.76);opacity:1;filter:blur(0)}100%{transform:scale(0);opacity:0;filter:blur(9px)}}
+    @keyframes nps-c1-backdrop{to{opacity:0}}
+    @media(prefers-reduced-motion:reduce){#production-loader.nps-c1-finish .production-launch-mark,#production-loader.nps-c1-finish .loader-text{animation:none;opacity:0}#production-loader.nps-c1-finish{animation-duration:.01ms}}
   </style>
 </head>
 <body>
@@ -176,7 +185,7 @@
 <path class="ink rise" style="--delay:.10s" d="M 175,135 H 192 C 192,122 176,121 175,134 C 173,147 185,150 193,143"/>
 <path class="ink rise" style="--delay:0s" d="M 207,145 V 125 M 207,135 C 210,128 215,125 223,125"/></g></svg>
   <div class="loader-text">
-    <span>アプリを起動しています</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
+    <span id="nps-production-status">アプリを起動しています</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
   </div>
   </div>
   </template>
@@ -375,6 +384,32 @@
       if(!npsLineCredential_)return;
       receiver.source.postMessage({type:'nps-line-credential-v2',challenge:receiver.challenge,accessToken:npsLineCredential_},receiver.origin);
     }
+    let npsC1Completed_=false,npsC1PdfWaitTimer_=null;
+    function npsC1FinishLoader_(){
+      if(npsC1Completed_)return;
+      npsC1Completed_=true;
+      clearTimeout(npsC1PdfWaitTimer_);
+      npsC1PdfWaitTimer_=null;
+      const loader=document.getElementById('production-loader');
+      if(!loader)return;
+      loader.classList.add('nps-c1-finish');
+      setTimeout(function(){loader.remove();},680);
+    }
+    window.addEventListener('message',function(event){
+      if(!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(event.origin)||!npsReceiverBelongsToViewer_(event.source))return;
+      const m=event.data;
+      const r=npsPendingReceiver_;
+      if(!m||!r||event.source!==r.source||event.origin!==r.origin||m.challenge!==r.challenge)return;
+      if(m.type==='nps-viewer-auth-check-v1'&&!npsC1Completed_){
+        const label=document.getElementById('nps-production-status');
+        if(label)label.textContent='アカウントの連携状態を確認中';
+      }else if(m.type==='nps-viewer-initial-pdf-ready-v1'){
+        npsC1FinishLoader_();
+      }else if(m.type==='nps-viewer-initial-pdf-error-v1'){
+        // Never leave the user trapped behind the splash on a failed PDF request.
+        npsC1FinishLoader_();
+      }
+    });
     window.addEventListener('message',function(event){
       if(!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(event.origin)||!npsReceiverBelongsToViewer_(event.source))return;
       const m=event.data;if(!m||m.type!=='nps-viewer-ready-v2'||!/^[a-f0-9]{64}$/.test(m.challenge||''))return;
@@ -382,7 +417,10 @@
       const first=!npsPendingReceiver_;
       npsPendingReceiver_={source:event.source,origin:event.origin,challenge:m.challenge};
       if(first){
-        document.getElementById('production-loader')?.remove();
+        // Reveal the Viewer if its initial PDF notification never arrives.
+        if(document.getElementById('production-loader')){
+          npsC1PdfWaitTimer_=setTimeout(npsC1FinishLoader_,20000);
+        }
         if(npsXDiagnostic_)npsXShowStatus_('Xの画面との接続を確認しました（LINE認証は未実施）',true);
         else {const status=document.getElementById('nps-x-status');if(status)status.remove();}
       }
@@ -515,6 +553,8 @@
     }
 
     function npsProductionError_(message){
+      clearTimeout(npsC1PdfWaitTimer_);
+      npsC1PdfWaitTimer_=null;
       document.getElementById('production-loader')?.remove();
       npsLineCredential_='';
       if (npsViewerFrame_) npsViewerFrame_.remove();
