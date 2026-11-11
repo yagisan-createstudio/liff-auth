@@ -308,13 +308,6 @@
     }
     if(normalEntryUnderMaintenance_())showMaintenance_();
 
-    // Begin as soon as the DOM is ready; do not wait for images and other subresources.
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', main, {once:true});
-    } else {
-      main();
-    }
-
     let npsViewerFrame_=null,npsLineCredential_='',npsPendingReceiver_=null,npsXWaitTimer_=null,npsXDiagnostic_=false;
     let npsProductionTiming_=null;
     let npsProductionStage_='';
@@ -338,7 +331,8 @@
             ['iframeAddedMs','iframe追加：このページの読み込み開始 → 要素追加直前'],
             ['iframeLoadMs','iframe load：要素追加直前 → 初回load'],
             ['iframeReadyMs','接続準備：要素追加直前 → 初回の検証済みready'],
-            ['totalMs','入口経過：このページの読み込み開始 → 初回の検証済みready']
+            ['totalMs','入口経過：このページの読み込み開始 → 初回の検証済みready'],
+            ['c1Reason','C1起動画面の終了理由']
           ];
           labels.forEach(function(row){
             const dt=document.createElement('dt');dt.textContent=row[1];list.append(dt);
@@ -362,6 +356,7 @@
         show('iframeLoadMs',t.iframeLoaded,t.iframeAdded);
         show('iframeReadyMs',t.ready,t.iframeAdded);
         show('totalMs',t.ready,t.started);
+        document.getElementById('production-diag-c1Reason').textContent=t.c1Reason||'PDF通知を待機中';
       }catch(e){ /* Diagnostics must not interrupt authentication. No exception details are displayed or logged. */ }
     }
     function npsProductionSetStage_(stage){
@@ -392,9 +387,10 @@
       receiver.source.postMessage({type:'nps-line-credential-v2',challenge:receiver.challenge,accessToken:npsLineCredential_},receiver.origin);
     }
     let npsC1Completed_=false,npsC1PdfWaitTimer_=null;
-    function npsC1FinishLoader_(){
+    function npsC1FinishLoader_(reason){
       if(npsC1Completed_)return;
       npsC1Completed_=true;
+      if(npsProductionTiming_){npsProductionTiming_.c1Reason=reason;npsProductionDiagnosticUpdate_();}
       clearTimeout(npsC1PdfWaitTimer_);
       npsC1PdfWaitTimer_=null;
       const loader=document.getElementById('production-loader');
@@ -411,7 +407,7 @@
         const label=document.getElementById('nps-production-status');
         if(label)label.textContent='アカウントの連携状態を確認中';
       }else if(m.type==='nps-viewer-initial-pdf-ready-v1'){
-        npsC1FinishLoader_();
+        npsC1FinishLoader_('PDF描画完了通知を受信');
       }else if(m.type==='nps-viewer-initial-pdf-error-v1'){
         // Never leave the user trapped behind the splash on a failed PDF request.
         npsC1FinishLoader_();
@@ -426,7 +422,7 @@
       if(first){
         // Reveal the Viewer if its initial PDF notification never arrives.
         if(document.getElementById('production-loader')){
-          npsC1PdfWaitTimer_=setTimeout(npsC1FinishLoader_,20000);
+          npsC1PdfWaitTimer_=setTimeout(()=>npsC1FinishLoader_('接続準備から20秒以内にPDF通知なし'),20000);
         }
         if(npsXDiagnostic_)npsXShowStatus_('Xの画面との接続を確認しました（LINE認証は未実施）',true);
         else {const status=document.getElementById('nps-x-status');if(status)status.remove();}
@@ -571,6 +567,13 @@
       npsProductionSetStage_(message);
       npsXShowStatus_(message+'\nLINEから開き直してください。',false);
     }
+    // Begin as soon as the DOM is ready; do not wait for images and other subresources.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', main, {once:true});
+    } else {
+      main();
+    }
+
   </script>
 </body>
 </html>
