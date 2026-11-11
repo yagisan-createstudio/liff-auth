@@ -410,7 +410,7 @@
         npsC1FinishLoader_('PDF描画完了通知を受信');
       }else if(m.type==='nps-viewer-initial-pdf-error-v1'){
         // Never leave the user trapped behind the splash on a failed PDF request.
-        npsC1FinishLoader_();
+        npsC1FinishLoader_('PDFエラー通知を受信');
       }
     });
     window.addEventListener('message',function(event){
