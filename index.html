@@ -7,7 +7,6 @@
   <!-- Warm up only public service connections; do not preload authenticated resources. -->
   <link rel="preconnect" href="https://static.line-scdn.net" crossorigin>
   <link rel="dns-prefetch" href="//script.google.com">
-  <link rel="preconnect" href="https://script.google.com">
   <link rel="dns-prefetch" href="//script.googleusercontent.com">
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
@@ -309,9 +308,12 @@
     }
     if(normalEntryUnderMaintenance_())showMaintenance_();
 
-    window.onload = function() {
+    // Begin as soon as the DOM is ready; do not wait for images and other subresources.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', main, {once:true});
+    } else {
       main();
-    };
+    }
 
     let npsViewerFrame_=null,npsLineCredential_='',npsPendingReceiver_=null,npsXWaitTimer_=null,npsXDiagnostic_=false;
     let npsProductionTiming_=null;
