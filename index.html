@@ -262,6 +262,50 @@
     const appType = getQueryParam('app');
     const isArchive = (appType === 'archive');
 
+    // Archive expiry: display before LIFF init, account verification, or GAS requests.
+    // The server repeats the same check; this client check is only for fast UX.
+    function npsArchiveEntryCheck_() {
+      if (!archiveMode_) return true;
+      const m = /^(\d{4})(\d{2})(\d{2})$/.exec(archiveDateRaw_);
+      let valid = false;
+      if (m) {
+        const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+        const target = Date.UTC(y, mo - 1, d);
+        const check = new Date(target);
+        if (check.getUTCFullYear() === y && check.getUTCMonth() === mo - 1 && check.getUTCDate() === d) {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit'
+          }).formatToParts(new Date());
+          const obj = {};
+          parts.forEach(function(p){ obj[p.type] = p.value; });
+          const today = Date.UTC(Number(obj.year), Number(obj.month) - 1, Number(obj.day));
+          const elapsed = Math.round((today - target) / 86400000);
+          valid = elapsed >= 0 && elapsed <= 7;
+        }
+      }
+      if (valid) return true;
+      const spinner = document.getElementById('spinner');
+      const loader = document.getElementById('loader-box');
+      const error = document.getElementById('err-text');
+      if (spinner) spinner.style.display = 'none';
+      if (loader) loader.style.display = 'none';
+      if (error) error.style.display = 'none';
+      const notice = document.createElement('section');
+      notice.id = 'nps-archive-expired-notice';
+      notice.setAttribute('role', 'status');
+      notice.style.cssText = 'width:min(90vw,420px);text-align:center;padding:28px 24px;border-radius:18px;background:#fff;box-shadow:0 10px 32px rgba(15,23,42,.07);';
+      const title = document.createElement('h1');
+      title.textContent = 'アーカイブ閲覧期間外です';
+      title.style.cssText = 'font-size:19px;line-height:1.5;font-weight:700;color:#334155;margin:0 0 12px;';
+      const description = document.createElement('p');
+      description.textContent = '指定された日付のレポートは閲覧できません。閲覧可能な期間のリンクをご確認ください。';
+      description.style.cssText = 'font-size:14px;line-height:1.85;color:#64748b;margin:0;';
+      notice.append(title,description);
+      document.body.appendChild(notice);
+      document.title = 'アーカイブ閲覧期間外｜NPS Viewer';
+      return false;
+    }
+
     function showArchiveClosure() {
       document.getElementById('spinner').style.display = 'none';
       document.getElementById('loader-box').style.display = 'none';
@@ -468,6 +512,7 @@
       }
     }
     async function main() {
+      if (!npsArchiveEntryCheck_()) return;
       if(!isArchive&&String(getQueryParam('viewer')||'').trim().toUpperCase()==='X')return npsOpenViewerX_();
       // Archive entry is closed before authentication, profile access or navigation.
       if (isArchive) { showArchiveClosure(); return; }
