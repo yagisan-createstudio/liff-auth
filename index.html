@@ -142,6 +142,7 @@
       border-radius:12px; background:#fff; color:#56263a; font-size:13px; line-height:1.55;
       box-shadow:0 6px 20px rgba(86,38,58,.12);
     }
+    .nps-archive-info-panel[hidden] { display:none; }
     .nps-archive-info-panel p { margin-top:4px; }
     @media(max-width:380px) {
       .nps-archive-launch-hint { left:14px; right:62px; max-width:calc(100vw - 76px); }
@@ -303,7 +304,7 @@
       parts.forEach(part => { tokyo[part.type] = Number(part.value); });
       const today = Date.UTC(tokyo.year, tokyo.month - 1, tokyo.day);
       const elapsed = (today - target.getTime()) / 86400000;
-      if (elapsed < 0 || elapsed > 7) return 'rejected';
+      if (elapsed < 0 || elapsed >= 7) return 'rejected';
       return elapsed > 1 || (elapsed === 1 && tokyo.hour >= 15) ? 'archive' : 'normal';
     }
 
