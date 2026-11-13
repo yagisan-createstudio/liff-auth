@@ -253,7 +253,13 @@
 
     // New archive viewer: date=YYYYMMDD. Keep legacy app=archive closure independent.
     const archiveDateRaw_ = String(getQueryParam('date') || '').trim();
-    const archiveMode_ = archiveDateRaw_ !== '';
+    // Latest normal report changes at 15:00 JST, independent of L/D generation flags.
+    function npsNormalDateKey_() {
+      const jst = new Date(Date.now() + 9 * 3600000);
+      if (jst.getUTCHours() < 15) jst.setUTCDate(jst.getUTCDate() - 1);
+      return String(jst.getUTCFullYear()) + String(jst.getUTCMonth()+1).padStart(2,'0') + String(jst.getUTCDate()).padStart(2,'0');
+    }
+    const archiveMode_ = archiveDateRaw_ !== '' && archiveDateRaw_ < npsNormalDateKey_();
     const archiveDateLooksValid_ = /^\d{8}$/.test(archiveDateRaw_);
     const archiveDateSafe_ = archiveDateLooksValid_ ? archiveDateRaw_ : 'invalid';
     const archiveLabel_ = archiveDateLooksValid_
@@ -265,7 +271,7 @@
     // Archive expiry: display before LIFF init, account verification, or GAS requests.
     // The server repeats the same check; this client check is only for fast UX.
     function npsArchiveEntryCheck_() {
-      if (!archiveMode_) return true;
+      if (!archiveDateRaw_) return true;
       const m = /^(\d{4})(\d{2})(\d{2})$/.exec(archiveDateRaw_);
       let valid = false;
       if (m) {
@@ -580,7 +586,7 @@
           if (npsProductionDiagnostic_) returnUrl.searchParams.set('diagnostic','1');
           if (meal === 'L' || meal === 'D') returnUrl.searchParams.set('meal',meal);
           if (target) returnUrl.searchParams.set('target',target);
-          if (archiveMode_) returnUrl.searchParams.set('date',archiveDateSafe_);
+          if (archiveDateRaw_) returnUrl.searchParams.set('date',archiveDateSafe_);
           sessionStorage.setItem(loginKey,String(Date.now()));
           npsProductionSetStage_('LINEログインへ移動中');
           liff.login({redirectUri:returnUrl.href});
@@ -595,7 +601,7 @@
         const url = new URL(URL_TODAY_VIEWER);
         if (meal === 'L' || meal === 'D') url.searchParams.set('meal',meal);
         if (target) url.searchParams.set('target',target);
-        if (archiveMode_) url.searchParams.set('date',archiveDateSafe_);
+        if (archiveDateRaw_) url.searchParams.set('date',archiveDateSafe_);
         npsViewerFrame_ = document.createElement('iframe');
         npsViewerFrame_.title = '日次レポートビューアー';
         npsViewerFrame_.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;background:white;z-index:5';
