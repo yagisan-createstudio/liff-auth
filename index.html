@@ -293,16 +293,20 @@
       const notice = document.createElement('section');
       notice.id = 'nps-archive-expired-notice';
       notice.setAttribute('role', 'status');
-      notice.style.cssText = 'width:min(90vw,420px);text-align:center;padding:28px 24px;border-radius:18px;background:#fff;box-shadow:0 10px 32px rgba(15,23,42,.07);';
+      notice.style.cssText = 'width:min(100%,440px);padding:24px 16px;text-align:center;';
+      const icon = document.createElement('span');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.style.cssText = 'display:inline-grid;place-items:center;width:24px;height:24px;border:2px solid currentColor;border-radius:50%;color:#595959;font-size:15px;font-weight:700;line-height:1;margin-bottom:14px;';
+      icon.textContent = 'i';
       const title = document.createElement('h1');
-      title.textContent = 'アーカイブ閲覧期間外です';
-      title.style.cssText = 'font-size:19px;line-height:1.5;font-weight:700;color:#334155;margin:0 0 12px;';
+      title.textContent = 'アーカイブの閲覧期間外です';
+      title.style.cssText = 'font-size:clamp(16px,5vw,22px);line-height:1.5;font-weight:700;color:#171717;margin:0 0 10px;';
       const description = document.createElement('p');
-      description.textContent = '指定された日付のレポートは閲覧できません。閲覧可能な期間のリンクをご確認ください。';
-      description.style.cssText = 'font-size:14px;line-height:1.85;color:#64748b;margin:0;';
-      notice.append(title,description);
+      description.textContent = 'このレポートは閲覧対象期間外です。\n閲覧可能な期間については、\n配信メッセージをご確認ください。';
+      description.style.cssText = 'font-size:14px;line-height:1.85;color:#595959;white-space:pre-line;';
+      notice.append(icon, title, description);
       document.body.appendChild(notice);
-      document.title = 'アーカイブ閲覧期間外｜NPS Viewer';
+      document.title = 'アーカイブの閲覧期間外｜NPS Viewer';
       return false;
     }
 
