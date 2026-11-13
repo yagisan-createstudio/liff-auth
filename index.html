@@ -126,6 +126,7 @@
     .production-diagnostic dt { margin-top:6px; }
     .production-diagnostic dd { font-weight:600; font-variant-numeric:tabular-nums; }
     .production-loader { position:fixed; inset:0; z-index:15; background:#ffe0e5; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .nps-archive-launch-hint { position:absolute; top:calc(20px + env(safe-area-inset-top,0px)); left:14px; right:14px; margin:auto; width:max-content; max-width:calc(100vw - 28px); border-radius:12px; padding:10px 15px; color:#8b1446; background:rgba(255,255,255,.62); border:1px solid rgba(255,255,255,.76); font:600 12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; text-align:center; font-variant-numeric:tabular-nums; }
     .production-launch-mark {
       display: block;
       width: min(60vw, 225px);
@@ -250,6 +251,14 @@
       return null;
     }
 
+    // New archive viewer: date=YYYYMMDD. Keep legacy app=archive closure independent.
+    const archiveDateRaw_ = String(getQueryParam('date') || '').trim();
+    const archiveMode_ = archiveDateRaw_ !== '';
+    const archiveDateLooksValid_ = /^\d{8}$/.test(archiveDateRaw_);
+    const archiveDateSafe_ = archiveDateLooksValid_ ? archiveDateRaw_ : 'invalid';
+    const archiveLabel_ = archiveDateLooksValid_
+      ? archiveDateRaw_.slice(0,4) + '/' + archiveDateRaw_.slice(4,6) + '/' + archiveDateRaw_.slice(6,8)
+      : '日付を確認してください';
     const appType = getQueryParam('app');
     const isArchive = (appType === 'archive');
 
@@ -485,7 +494,17 @@
       document.body.append(loader.content.cloneNode(true));
       document.getElementById('spinner').style.display = 'none';
       document.getElementById('loader-box').style.display = 'none';
-      document.getElementById('page-title').innerText = 'NPS Viewer｜旧 日次レポートビューアー';
+      document.getElementById('page-title').innerText = archiveMode_
+        ? 'アーカイブ閲覧モード｜NPS Viewer'
+        : 'NPS Viewer｜旧 日次レポートビューアー';
+      if (archiveMode_) {
+        const label = document.createElement('div');
+        label.className = 'nps-archive-launch-hint';
+        label.textContent = 'アーカイブ閲覧モード · ' + archiveLabel_;
+        document.getElementById('production-loader').prepend(label);
+        const status = document.getElementById('nps-production-status');
+        if (status) status.textContent = '過去のレポートを開いています';
+      }
       npsProductionDiagnostic_ = getQueryParam('diagnostic') === '1';
       if (npsProductionDiagnostic_) npsProductionTiming_ = {started:0};
       npsProductionSetStage_('LIFFを初期化中');
@@ -516,6 +535,7 @@
           if (npsProductionDiagnostic_) returnUrl.searchParams.set('diagnostic','1');
           if (meal === 'L' || meal === 'D') returnUrl.searchParams.set('meal',meal);
           if (target) returnUrl.searchParams.set('target',target);
+          if (archiveMode_) returnUrl.searchParams.set('date',archiveDateSafe_);
           sessionStorage.setItem(loginKey,String(Date.now()));
           npsProductionSetStage_('LINEログインへ移動中');
           liff.login({redirectUri:returnUrl.href});
@@ -530,6 +550,7 @@
         const url = new URL(URL_TODAY_VIEWER);
         if (meal === 'L' || meal === 'D') url.searchParams.set('meal',meal);
         if (target) url.searchParams.set('target',target);
+        if (archiveMode_) url.searchParams.set('date',archiveDateSafe_);
         npsViewerFrame_ = document.createElement('iframe');
         npsViewerFrame_.title = '日次レポートビューアー';
         npsViewerFrame_.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:0;background:white;z-index:5';
