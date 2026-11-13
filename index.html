@@ -266,7 +266,7 @@
     // The server repeats the same check; this client check is only for fast UX.
     function npsArchiveEntryCheck_() {
       if (!archiveMode_) return true;
-      const m = /^(\\d{4})(\\d{2})(\\d{2})$/.exec(archiveDateRaw_);
+      const m = /^(\d{4})(\d{2})(\d{2})$/.exec(archiveDateRaw_);
       let valid = false;
       if (m) {
         const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
