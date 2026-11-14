@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title id="page-title">NPS Viewer</title>
+  <meta name="description" content="NPSレポートを閲覧できます。">
+  <meta property="og:title" content="NPS Viewer">
+  <meta property="og:description" content="NPSレポートを閲覧できます。">
   <!-- Warm up only public service connections; do not preload authenticated resources. -->
   <link rel="preconnect" href="https://static.line-scdn.net" crossorigin>
   <link rel="dns-prefetch" href="//script.google.com">
@@ -94,30 +97,6 @@
       display: none;
       line-height: 1.4;
     }
-    .maintenance-page { display:none; position:fixed; inset:0; z-index:30; overflow:auto; background:#f8fafc; color:#172b43; -webkit-overflow-scrolling:touch; }
-    .maintenance-shell { max-width:1080px; min-height:100%; margin:auto; padding:32px 48px 24px; display:flex; flex-direction:column; }
-    .maintenance-brand { display:flex; align-items:center; gap:12px; font-size:14px; font-weight:650; letter-spacing:.04em; }
-    .maintenance-mark { width:32px; height:32px; padding:7px; border-radius:9px; color:white; background:#223b57; }
-    .maintenance-content { flex:1; display:flex; align-items:center; justify-content:space-between; gap:48px; padding:76px 0; }
-    .maintenance-copy { max-width:550px; }
-    .maintenance-tag { display:inline-flex; align-items:center; gap:8px; color:#506980; font-size:11px; font-weight:650; letter-spacing:.12em; margin-bottom:24px; }
-    .maintenance-tag::before { content:''; width:7px; height:7px; border-radius:50%; background:#aa8248; }
-    .maintenance-page h1 { margin:0 0 24px; font-size:clamp(28px,3.8vw,42px); font-weight:650; line-height:1.6; letter-spacing:-.035em; }
-    .maintenance-description { font-size:14px; line-height:2; color:#65768a; }
-    .maintenance-note { margin-top:28px; padding:17px 20px; border-left:2px solid #b6c4d2; background:#edf2f6; font-size:12px; line-height:1.9; color:#53677b; }
-    .maintenance-reload { margin-top:28px; padding:13px 23px; border:1px solid #c6d0db; border-radius:8px; background:white; color:#223b57; font-size:13px; font-weight:600; cursor:pointer; }
-    .maintenance-reload:hover { background:#edf2f6; }
-    .maintenance-reload:focus-visible { outline:3px solid #8ca7c2; outline-offset:4px; }
-    .maintenance-art { flex:0 0 240px; width:240px; height:240px; }
-    .maintenance-footer { padding-top:20px; border-top:1px solid #dce4ec; display:flex; justify-content:space-between; gap:12px; color:#7b8a9a; font-size:10px; letter-spacing:.03em; }
-    @media(max-width:680px) { .maintenance-shell { padding:max(24px,env(safe-area-inset-top)) 25px max(24px,env(safe-area-inset-bottom)); } .maintenance-content { flex-direction:column-reverse; align-items:flex-start; justify-content:center; gap:30px; padding:44px 0; } .maintenance-art { align-self:center; flex-basis:150px; width:150px; height:150px; } .maintenance-page h1 { font-size:28px; } .maintenance-tag { margin-bottom:18px; } .maintenance-footer { flex-direction:column; gap:6px; } }
-    .maintenance-page { background:#fff; color:#333; }
-    .maintenance-simple { width:calc(100% - 48px); max-width:600px; margin:15vh auto 0; text-align:center; padding-bottom:40px; }
-    .maintenance-code { font-family:Arial,sans-serif; font-size:100px; font-weight:700; line-height:1.1; color:#333; }
-    .maintenance-simple h1 { font-family:Arial,sans-serif; font-size:24px; line-height:1.5; letter-spacing:0; margin:14px 0 32px; font-weight:400; }
-    .maintenance-simple p { font-size:13px; line-height:2; color:#666; }
-    .maintenance-simple hr { border:0; border-top:1px solid #ddd; margin:32px 0 20px; }
-    .maintenance-simple small { font-size:11px; color:#999; }
     .production-diagnostic { position:fixed; right:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); z-index:35; width:320px; max-width:calc(100vw - 20px); max-height:35vh; max-height:35dvh; overflow:auto; -webkit-overflow-scrolling:touch; padding:10px 12px; border:1px solid #cbd5e1; border-radius:12px; background:#f7f7f4; color:#334155; box-shadow:0 2px 12px #0002; font-size:11px; line-height:1.6; text-align:left; }
     .production-diagnostic[hidden] { display:none; }
     .production-diagnostic header { display:flex; align-items:center; justify-content:space-between; gap:8px; position:sticky; top:-10px; background:#f7f7f4; }
@@ -184,17 +163,6 @@
   </style>
 </head>
 <body>
-  <section class="maintenance-page" id="maintenance-page" aria-labelledby="maintenance-title">
-    <div class="maintenance-simple">
-      <div class="maintenance-code">503</div>
-      <h1 id="maintenance-title">Service Unavailable</h1>
-      <p>ただいまメンテナンス中です。</p>
-      <p>時間をおいて、再度アクセスしてください。</p>
-      <hr>
-      <small>store_code4162@Domo</small>
-      <div style="margin-top:12px"><a href="https://yagisan-createstudio.github.io/terms_of_service/" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#777;text-decoration:underline;text-underline-offset:3px">利用規約</a></div>
-    </div>
-  </section>
   <div class="app-spinner" id="spinner"></div>
   <div class="loader-text" id="loader-box">
     <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
@@ -246,8 +214,6 @@
   </main>
 
   <script>
-    // Maintenance still permits the explicit production verification links.
-    const NORMAL_ENTRY_MAINTENANCE = false;
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
 
     // Temporarily use the same Apps Script as test Viewer A for the standard LIFF entry.
@@ -351,14 +317,6 @@
       document.getElementById('status-text').innerText = 'リダイレクト中';
     }
 
-    function showMaintenance_(){
-      document.getElementById('spinner').style.display='none';
-      document.getElementById('loader-box').style.display='none';
-      document.getElementById('err-text').style.display='none';
-      document.getElementById('maintenance-page').style.display='block';
-      document.getElementById('page-title').innerText='メンテナンス中｜NPS Viewer';
-    }
-    // Only the SDK's test-path primary redirect may pass through maintenance.
     // This selects a destination, never grants Viewer permissions.
     function readTestLoginReturn_(){
       try {
@@ -380,17 +338,12 @@
     }
     const testLoginReturn_=readTestLoginReturn_();
     const productionCheck_ = getQueryParam('production') === '1';
-    if (!isArchive && (testLoginReturn_ || productionCheck_ || !NORMAL_ENTRY_MAINTENANCE)) {
+    if (!isArchive) {
       const viewerConnection = document.createElement('link');
       viewerConnection.rel = 'preconnect';
       viewerConnection.href = 'https://script.google.com';
       document.head.appendChild(viewerConnection);
     }
-    function normalEntryUnderMaintenance_(){
-      return NORMAL_ENTRY_MAINTENANCE && !productionCheck_ && !testLoginReturn_ && !isArchive && String(getQueryParam('viewer')||'').trim().toUpperCase()!=='X';
-    }
-    if(normalEntryUnderMaintenance_())showMaintenance_();
-
     let npsViewerFrame_=null,npsLineCredential_='',npsPendingReceiver_=null,npsXWaitTimer_=null,npsXDiagnostic_=false;
     let npsProductionTiming_=null;
     let npsProductionStage_='';
@@ -561,7 +514,6 @@
         }
         return;
       }
-      if(normalEntryUnderMaintenance_()){showMaintenance_();return;}
       await npsOpenProduction_(dateState);
     }
 
