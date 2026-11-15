@@ -168,30 +168,26 @@
     .nps-home {
       position:fixed; inset:0; overflow:auto; overscroll-behavior:contain;
       background:linear-gradient(170deg,#ffdee4,#fff6f7 65%); color:#321f29;
-      padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right))
-        max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+      padding:max(24px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
+        max(24px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
     }
     .nps-home-shell { width:min(100%,420px); margin:auto; }
     .nps-home h1 { font-size:29px; line-height:1.1; letter-spacing:-.035em; color:#ad0948; }
     .nps-home-brand p { margin:8px 0 16px; font-size:14px; color:#664c57; }
-    .nps-home-card { padding:10px 12px 13px; background:#fff; border:1px solid #efdce3; border-radius:16px; }
-    .nps-home-dates { list-style:none; }
+    .nps-home-card { padding:14px 8px 10px; background:#fff; border:1px solid #efdce3; border-radius:16px; }
+    .nps-home-card h2 { margin:0 4px 10px; font-size:15px; font-variant-numeric:tabular-nums; }
+    .nps-home-dates { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px; list-style:none; }
     .nps-home-day {
-      display:flex; align-items:center; justify-content:space-between; gap:8px;
-      background:none; color:inherit; border:0; border-radius:8px; width:100%; min-height:44px;
-      padding:7px 12px; font:inherit; font-size:15px; font-weight:600; text-align:left; cursor:pointer;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:5px; min-height:64px; border-radius:8px; color:inherit; text-decoration:none;
+      font-variant-numeric:tabular-nums; -webkit-tap-highlight-color:transparent;
     }
-    .nps-home-day[aria-pressed="true"] { color:#8f0e40; background:#fceaf0; }
-    .nps-home-day[aria-pressed="true"]::after { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
-    .nps-home-day small { margin-left:8px; color:#8f0e40; font-size:12px; }
-    .nps-home-selection { margin-top:10px; border-top:1px solid #f0e2e7; padding-top:10px; }
-    .nps-home-selection h2 { font-size:14px; }
-    .nps-home-meals { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
-    .nps-home-meals a {
-      min-height:44px; display:grid; place-items:center; border-radius:8px; background:#ad0948;
-      color:#fff; text-decoration:none; font-size:14px; font-weight:700;
-    }
-    .nps-home :focus-visible { outline:2px solid #5b1740; outline-offset:2px; }
+    .nps-home-day small { font-size:12px; line-height:1; color:#6b515d; }
+    .nps-home-day strong { font-size:18px; line-height:1; }
+    .nps-home-day[aria-current="date"] { background:#ad0948; color:#fff; }
+    .nps-home-day[aria-current="date"] small { color:inherit; }
+    .nps-home-day:active:not([aria-current]) { background:#fceaf0; }
+    .nps-home-day:focus-visible { outline:2px solid #5b1740; outline-offset:-2px; }
   </style>
 </head>
 <body>
@@ -202,16 +198,10 @@
           <h1>NPS Viewer</h1>
           <p>レポートの日付を選択</p>
         </header>
-        <div class="nps-home-card">
-          <ul class="nps-home-dates" aria-label="閲覧期間内の日付"></ul>
-          <div class="nps-home-selection">
-            <h2 id="nps-home-selected" aria-live="polite"></h2>
-            <nav class="nps-home-meals" aria-labelledby="nps-home-selected">
-              <a data-meal="L">ランチ</a>
-              <a data-meal="D">ディナー</a>
-            </nav>
-          </div>
-        </div>
+        <section class="nps-home-card" aria-labelledby="nps-home-period">
+          <h2 id="nps-home-period"></h2>
+          <ul class="nps-home-dates"></ul>
+        </section>
       </div>
     </main>
   </template>
@@ -559,66 +549,53 @@
       const fragment = document.getElementById('nps-home-template').content.cloneNode(true);
       const home = fragment.querySelector('.nps-home');
       const dates = home.querySelector('.nps-home-dates');
-      const selectedHeading = home.querySelector('#nps-home-selected');
-      const meals = home.querySelectorAll('[data-meal]');
+      const period = home.querySelector('#nps-home-period');
       const todayFormat = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit'
       });
-      const dayFormat = new Intl.DateTimeFormat('ja-JP', {
-        timeZone: 'UTC', month: 'long', day: 'numeric', weekday: 'short'
+      const fullDateFormat = new Intl.DateTimeFormat('ja-JP', {
+        timeZone: 'UTC', year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
       });
+      const monthFormat = new Intl.DateTimeFormat('ja-JP', {
+        timeZone: 'UTC', year: 'numeric', month: 'long'
+      });
+      const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
       let todayKey = '';
-      let selectedKey = '';
-
-      function selectDay(button) {
-        selectedKey = button.dataset.date;
-        selectedHeading.textContent = button.dataset.label + 'のレポート';
-        for (const day of dates.querySelectorAll('button')) {
-          day.setAttribute('aria-pressed', String(day === button));
-        }
-        for (const link of meals) {
-          link.href = '?' + new URLSearchParams({date: selectedKey, meal: link.dataset.meal});
-        }
-      }
 
       function refreshDates() {
         const now = new Date();
         const parts = Object.fromEntries(todayFormat.formatToParts(now).map(({type, value}) => [type, value]));
         const nextTodayKey = parts.year + parts.month + parts.day;
         if (nextTodayKey === todayKey) return;
-        const selectToday = !selectedKey || selectedKey === todayKey;
         todayKey = nextTodayKey;
 
         const day = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)));
+        const latestMonth = monthFormat.format(day);
+        let firstMonth = latestMonth;
         const rows = document.createDocumentFragment();
-        let selection;
         for (;;) {
           const key = day.toISOString().slice(0, 10).replace(/-/g, '');
           if (npsArchiveDateState_(key, now) === 'rejected') break;
 
           const row = document.createElement('li');
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'nps-home-day';
-          button.dataset.date = key;
-          button.dataset.label = dayFormat.format(day);
-          const label = document.createElement('span');
-          label.textContent = button.dataset.label;
-          if (key === todayKey) {
-            const badge = document.createElement('small');
-            badge.textContent = '今日';
-            label.append(badge);
-            button.setAttribute('aria-current', 'date');
-          }
-          button.append(label);
-          button.addEventListener('click', () => selectDay(button));
-          row.append(button);
-          rows.append(row);
-          if (!selectToday && key === selectedKey) selection = button;
+          const link = document.createElement('a');
+          link.className = 'nps-home-day';
+          link.href = '?' + new URLSearchParams({date: key, meal: 'D'});
+          link.setAttribute('aria-label', fullDateFormat.format(day));
+          if (key === todayKey) link.setAttribute('aria-current', 'date');
+
+          const weekday = document.createElement('small');
+          weekday.textContent = weekdays[day.getUTCDay()];
+          const dayNumber = document.createElement('strong');
+          dayNumber.textContent = day.getUTCDate();
+          link.append(weekday, dayNumber);
+          row.append(link);
+          rows.prepend(row);
+          firstMonth = monthFormat.format(day);
           day.setUTCDate(day.getUTCDate() - 1);
         }
+        period.textContent = firstMonth === latestMonth ? latestMonth : firstMonth + ' 〜 ' + latestMonth;
         dates.replaceChildren(rows);
-        selectDay(selection || dates.querySelector('button'));
       }
 
       window.addEventListener('pageshow', refreshDates);
