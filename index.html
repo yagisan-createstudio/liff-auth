@@ -176,15 +176,18 @@
     .nps-home-brand p { margin:8px 0 16px; font-size:14px; color:#664c57; }
     .nps-home-card { padding:14px 8px 10px; background:#fff; border:1px solid #efdce3; border-radius:16px; }
     .nps-home-card h2 { margin:0 4px 10px; font-size:15px; font-variant-numeric:tabular-nums; }
-    .nps-home-dates { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; list-style:none; }
+    .nps-home-weekdays, .nps-home-dates { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px; }
+    .nps-home-weekdays { color:#6b515d; text-align:center; font-size:12px; font-weight:600; }
+    .nps-home-dates { list-style:none; }
     .nps-home-day {
       display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:5px; min-height:64px; border-radius:8px; color:inherit; text-decoration:none;
+      min-height:48px; border-radius:8px; color:inherit; text-decoration:none;
       font-variant-numeric:tabular-nums; -webkit-tap-highlight-color:transparent;
     }
-    .nps-home-day small { font-size:12px; line-height:1; color:#6b515d; }
     .nps-home-day strong { font-size:18px; line-height:1; }
-    .nps-home-day:active { background:#fceaf0; }
+    .nps-home-day.is-unavailable { color:#887480; }
+    .nps-home-day-status { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+    a.nps-home-day:active { background:#fceaf0; }
     .nps-home-day:focus-visible { outline:2px solid #5b1740; outline-offset:-2px; }
   </style>
 </head>
@@ -198,6 +201,9 @@
         </header>
         <section class="nps-home-card" aria-labelledby="nps-home-period">
           <h2 id="nps-home-period"></h2>
+          <div class="nps-home-weekdays" aria-hidden="true">
+            <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+          </div>
           <ul class="nps-home-dates"></ul>
         </section>
       </div>
@@ -557,7 +563,6 @@
       const monthFormat = new Intl.DateTimeFormat('ja-JP', {
         timeZone: 'UTC', year: 'numeric', month: 'long'
       });
-      const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
       let todayKey = '';
 
       function refreshDates() {
@@ -568,31 +573,39 @@
         todayKey = nextTodayKey;
 
         const day = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)));
-        const latestMonth = monthFormat.format(day);
-        let firstMonth = latestMonth;
+        day.setUTCDate(day.getUTCDate() - day.getUTCDay() - 7);
+        const firstMonth = monthFormat.format(day);
         const rows = document.createDocumentFragment();
-        for (;;) {
-          const key = day.toISOString().slice(0, 10).replace(/-/g, '');
-          if (npsArchiveDateState_(key, now) === 'rejected') break;
-
+        for (let index = 0; index < 14; index++) {
+          const isoDate = day.toISOString().slice(0, 10);
+          const key = isoDate.replace(/-/g, '');
+          const dateLabel = fullDateFormat.format(day);
           const row = document.createElement('li');
-          const link = document.createElement('a');
-          link.className = 'nps-home-day';
-          link.href = '?' + new URLSearchParams({date: key, meal: 'D'});
-          link.setAttribute('aria-label', fullDateFormat.format(day));
-          if (key === todayKey) link.setAttribute('aria-current', 'date');
-
-          const weekday = document.createElement('small');
-          weekday.textContent = weekdays[day.getUTCDay()];
+          const available = npsArchiveDateState_(key, now) !== 'rejected';
+          const entry = document.createElement(available ? 'a' : 'span');
+          entry.className = 'nps-home-day';
           const dayNumber = document.createElement('strong');
           dayNumber.textContent = day.getUTCDate();
-          link.append(weekday, dayNumber);
-          row.append(link);
-          rows.prepend(row);
-          firstMonth = monthFormat.format(day);
-          day.setUTCDate(day.getUTCDate() - 1);
+          entry.append(dayNumber);
+
+          if (available) {
+            entry.href = '?' + new URLSearchParams({date: key, meal: 'D'});
+            entry.setAttribute('aria-label', dateLabel);
+            if (key === todayKey) entry.setAttribute('aria-current', 'date');
+          } else {
+            entry.classList.add('is-unavailable');
+            dayNumber.setAttribute('aria-hidden', 'true');
+            const status = document.createElement('span');
+            status.className = 'nps-home-day-status';
+            status.textContent = dateLabel + (key > todayKey ? '、未来の日付' : '、閲覧期間外');
+            entry.append(status);
+          }
+          row.append(entry);
+          rows.append(row);
+          if (index < 13) day.setUTCDate(day.getUTCDate() + 1);
         }
-        period.textContent = firstMonth === latestMonth ? latestMonth : firstMonth + ' 〜 ' + latestMonth;
+        const lastMonth = monthFormat.format(day);
+        period.textContent = firstMonth === lastMonth ? firstMonth : firstMonth + ' 〜 ' + lastMonth;
         dates.replaceChildren(rows);
       }
 
