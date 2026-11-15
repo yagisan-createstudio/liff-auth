@@ -160,9 +160,22 @@
     @keyframes nps-c1-absorb{0%{transform:scale(1);opacity:1;filter:blur(0)}30%{transform:scale(1.045);opacity:1;filter:blur(0)}62%{transform:scale(.76);opacity:1;filter:blur(0)}100%{transform:scale(0);opacity:0;filter:blur(9px)}}
     @keyframes nps-c1-backdrop{to{opacity:0}}
     @media(prefers-reduced-motion:reduce){#production-loader.nps-c1-finish .production-launch-mark,#production-loader.nps-c1-finish .loader-text{animation:none;opacity:0}#production-loader.nps-c1-finish{animation-duration:.01ms}}
+    .nps-production-error { width:min(100%,440px); padding:24px 16px; text-align:center; color:#171717; }
+    .nps-production-error-icon { display:inline-grid; place-items:center; width:28px; height:28px; border:2px solid currentColor; border-radius:50%; color:#595959; font-size:17px; font-weight:700; line-height:1; margin-bottom:14px; }
+    .nps-production-error h1 { font-size:clamp(17px,5vw,22px); margin-bottom:10px; }
+    .nps-production-error p { font-size:14px; line-height:1.85; color:#595959; }
+    .nps-production-error .nps-production-error-code { margin-top:12px; font-size:12px; }
   </style>
 </head>
 <body>
+  <template id="nps-production-error-template">
+    <section class="nps-production-error" role="alert">
+      <span class="nps-production-error-icon" aria-hidden="true">!</span>
+      <h1>表示に失敗しました</h1>
+      <p>恐れ入りますが、この画面を一度閉じて、<br>開き直してください。</p>
+      <p class="nps-production-error-code" lang="en"></p>
+    </section>
+  </template>
   <div class="app-spinner" id="spinner"></div>
   <div class="loader-text" id="loader-box">
     <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
@@ -496,6 +509,11 @@
       }
     }
     async function main() {
+      const preview = new URLSearchParams(window.location.search).get('errorPreview');
+      if (['LIFF-01', 'VIEWER-01', 'VIEWER-02'].includes(preview)) {
+        npsShowProductionError_(preview);
+        return;
+      }
       const dateState = npsArchiveDateState_(archiveDateRaw_);
       if (!npsArchiveEntryCheck_(dateState)) return;
       if(!isArchive&&String(getQueryParam('viewer')||'').trim().toUpperCase()==='X')return npsOpenViewerX_();
@@ -555,6 +573,7 @@
       npsProductionDiagnostic_ = getQueryParam('diagnostic') === '1';
       if (npsProductionDiagnostic_) npsProductionTiming_ = {started:0};
       npsProductionSetStage_('LIFFを初期化中');
+      let failureCode='LIFF-01';
       let failureMessage='LINEの初期化が完了しませんでした。';
       try {
         if (npsProductionTiming_) npsProductionTiming_.liffStarted = npsProductionNow_();
@@ -592,6 +611,7 @@
         const credential = liff.getAccessToken();
         if (!credential) throw new Error('LINE認証情報を取得できませんでした。LINEから開き直してください。');
         npsLineCredential_ = credential;
+        failureCode='VIEWER-02';
         failureMessage='ビューアーを開けませんでした。';
 
         const url = new URL(URL_TODAY_VIEWER);
@@ -618,14 +638,22 @@
         document.body.append(npsViewerFrame_);
         npsXWaitTimer_ = setTimeout(function(){
           if (npsPendingReceiver_) return;
-          npsProductionError_('ビューアーから接続準備の通知が届きませんでした。');
+          npsProductionError_('VIEWER-01', 'ビューアーから接続準備の通知が届きませんでした。');
         },45000);
       }catch(error){
-        npsProductionError_(failureMessage);
+        npsProductionError_(failureCode, failureMessage);
       }
     }
 
-    function npsProductionError_(message){
+    function npsShowProductionError_(code){
+      for (const id of ['spinner', 'loader-box', 'closure-notice']) {
+        document.getElementById(id).style.display = 'none';
+      }
+      const notice = document.getElementById('nps-production-error-template').content.cloneNode(true);
+      notice.querySelector('.nps-production-error-code').textContent = 'Error Code ' + code;
+      document.body.append(notice);
+    }
+    function npsProductionError_(code, message){
       clearTimeout(npsC1PdfWaitTimer_);
       npsC1PdfWaitTimer_=null;
       document.getElementById('production-loader')?.remove();
@@ -633,7 +661,7 @@
       if (npsViewerFrame_) npsViewerFrame_.remove();
       npsViewerFrame_=null;
       npsProductionSetStage_(message);
-      npsXShowStatus_(message+'\nLINEから開き直してください。',false);
+      npsShowProductionError_(code);
     }
     // Begin as soon as the DOM is ready; do not wait for images and other subresources.
     if (document.readyState === 'loading') {
