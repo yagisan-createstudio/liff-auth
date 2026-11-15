@@ -167,7 +167,7 @@
     .nps-production-error .nps-production-error-code { margin-top:12px; font-size:12px; }
     .nps-home {
       position:fixed; inset:0; overflow:auto; overscroll-behavior:contain;
-      background:linear-gradient(170deg,#ffdee4,#fff6f7 65%); color:#321f29;
+      background:#ffe0e5; color:#321f29;
       padding:max(24px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
         max(24px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
     }
@@ -176,7 +176,7 @@
     .nps-home-brand p { margin:8px 0 16px; font-size:14px; color:#664c57; }
     .nps-home-card { padding:14px 8px 10px; background:#fff; border:1px solid #efdce3; border-radius:16px; }
     .nps-home-card h2 { margin:0 4px 10px; font-size:15px; font-variant-numeric:tabular-nums; }
-    .nps-home-dates { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px; list-style:none; }
+    .nps-home-dates { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; list-style:none; }
     .nps-home-day {
       display:flex; flex-direction:column; align-items:center; justify-content:center;
       gap:5px; min-height:64px; border-radius:8px; color:inherit; text-decoration:none;
@@ -184,9 +184,7 @@
     }
     .nps-home-day small { font-size:12px; line-height:1; color:#6b515d; }
     .nps-home-day strong { font-size:18px; line-height:1; }
-    .nps-home-day[aria-current="date"] { background:#ad0948; color:#fff; }
-    .nps-home-day[aria-current="date"] small { color:inherit; }
-    .nps-home-day:active:not([aria-current]) { background:#fceaf0; }
+    .nps-home-day:active { background:#fceaf0; }
     .nps-home-day:focus-visible { outline:2px solid #5b1740; outline-offset:-2px; }
   </style>
 </head>
