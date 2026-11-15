@@ -165,9 +165,88 @@
     .nps-production-error h1 { font-size:clamp(17px,5vw,22px); margin-bottom:10px; }
     .nps-production-error p { font-size:14px; line-height:1.85; color:#595959; }
     .nps-production-error .nps-production-error-code { margin-top:12px; font-size:12px; }
+    .nps-home {
+      position:fixed; inset:0; overflow:auto; overscroll-behavior:contain;
+      background:linear-gradient(170deg,#ffdee4 0,#fff1f3 43%,#fcf8f8 75%); color:#321f29;
+      padding: max(24px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
+        max(24px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+    }
+    .nps-home-shell { width:min(100%,470px); margin:auto; }
+    .nps-home-brand { margin:0 2px 14px; }
+    .nps-home-brand h1 { font-size:30px; line-height:1.1; letter-spacing:-.035em; color:#b40749; }
+    .nps-home-brand p { margin-top:7px; font-size:14px; color:#664c57; }
+    .nps-home-card {
+      padding:12px; background:#fff; border:1px solid #efdce3; border-radius:20px;
+      box-shadow:0 14px 40px #652a4910;
+    }
+    .nps-home-month { display:grid; grid-template-columns:44px 1fr 44px; align-items:center; text-align:center; }
+    .nps-home-month h2 { font-size:19px; font-variant-numeric:tabular-nums; }
+    .nps-home button { color:inherit; font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .nps-home-month button { width:44px; height:44px; border:0; border-radius:11px; background:#fcf3f6; color:#a10945; font-size:24px; }
+    .nps-home-month button:disabled { background:none; color:#aea2a8; cursor:default; }
+    .nps-home-calendar { width:100%; table-layout:fixed; border-spacing:2px; }
+    .nps-home-calendar th { height:28px; font-size:12px; font-weight:600; color:#6e5762; }
+    .nps-home-calendar td { padding:0; text-align:center; vertical-align:middle; }
+    .nps-home-calendar .nps-home-day {
+      width:100%; min-height:47px; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:2px; border-radius:9px; border:1px solid transparent;
+      font-variant-numeric:tabular-nums; font-size:16px; font-weight:700; line-height:1.05;
+    }
+    .nps-home-calendar button.nps-home-day { background:#fceaf0; color:#8f0e40; }
+    .nps-home-calendar button[aria-pressed="true"] { background:#ad0948; color:#fff; }
+    .nps-home-calendar button[aria-current="date"]:not([aria-pressed="true"]) { border-color:#b40749; }
+    .nps-home-day.is-unavailable { background:#f6f3f4; color:#6b5e65; }
+    .nps-home-day small { display:block; font-size:10px; line-height:1.13; font-weight:600; }
+    .nps-home-selection { margin-top:12px; border-top:1px solid #f0e2e7; padding-top:11px; }
+    .nps-home-selection h2 { font-size:15px; }
+    .nps-home-meals { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+    .nps-home-meals a, .nps-home-latest {
+      min-height:44px; display:grid; place-items:center; border-radius:10px;
+      text-decoration:none; font-size:14px; font-weight:700;
+    }
+    .nps-home-meals a { background:#ad0948; color:#fff; }
+    .nps-home-latest { margin-top:5px; color:#8f0e40; text-decoration:underline; text-underline-offset:3px; }
+    .nps-home :focus-visible { outline:2px solid #5b1740; outline-offset:2px; }
+    @media (min-width:420px) {
+      .nps-home-card { padding:16px; }
+      .nps-home-calendar { border-spacing:4px; }
+      .nps-home-calendar .nps-home-day { min-height:52px; }
+    }
   </style>
 </head>
 <body>
+  <template id="nps-home-template">
+    <main class="nps-home">
+      <div class="nps-home-shell">
+        <header class="nps-home-brand">
+          <h1>NPS Viewer</h1>
+          <p>レポートの日付を選択</p>
+        </header>
+        <section class="nps-home-card" aria-label="レポートカレンダー">
+          <div class="nps-home-month">
+            <button type="button" data-month-step="-1" aria-label="前の月">‹</button>
+            <h2 id="nps-home-month" aria-live="polite"></h2>
+            <button type="button" data-month-step="1" aria-label="次の月">›</button>
+          </div>
+          <table class="nps-home-calendar" aria-labelledby="nps-home-month">
+            <thead><tr>
+              <th scope="col">日</th><th scope="col">月</th><th scope="col">火</th>
+              <th scope="col">水</th><th scope="col">木</th><th scope="col">金</th><th scope="col">土</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="nps-home-selection">
+            <h2 id="nps-home-selected" aria-live="polite"></h2>
+            <nav class="nps-home-meals" aria-labelledby="nps-home-selected">
+              <a data-meal="L">ランチ</a>
+              <a data-meal="D">ディナー</a>
+            </nav>
+          </div>
+          <a class="nps-home-latest" href="?production=1">最新のレポートを開く</a>
+        </section>
+      </div>
+    </main>
+  </template>
   <template id="nps-production-error-template">
     <section class="nps-production-error" role="alert">
       <span class="nps-production-error-icon" aria-hidden="true">!</span>
@@ -508,7 +587,125 @@
         npsXShowStatus_(error&&error.message||'検証画面を開けませんでした',false);
       }
     }
+    function npsShowHome_() {
+      const fragment = document.getElementById('nps-home-template').content.cloneNode(true);
+      const home = fragment.querySelector('.nps-home');
+      const monthHeading = home.querySelector('#nps-home-month');
+      const selectedHeading = home.querySelector('#nps-home-selected');
+      const calendar = home.querySelector('tbody');
+      const previous = home.querySelector('[data-month-step="-1"]');
+      const next = home.querySelector('[data-month-step="1"]');
+      const meals = home.querySelectorAll('[data-meal]');
+      const todayFormat = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit'
+      });
+      const dayFormat = new Intl.DateTimeFormat('ja-JP', {
+        timeZone: 'UTC', month: 'long', day: 'numeric', weekday: 'short'
+      });
+      const dateKey = date => date.toISOString().slice(0, 10).replace(/-/g, '');
+      const monthStart = (date, step = 0) => new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + step, 1));
+      const monthEnd = date => new Date(monthStart(date, 1).getTime() - 86400000);
+      const getToday = now => {
+        const parts = Object.fromEntries(todayFormat.formatToParts(now).map(({type, value}) => [type, value]));
+        return new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)));
+      };
+      const initialNow = new Date();
+      let today = getToday(initialNow);
+      let month = monthStart(today);
+      let selected;
+
+      function selectDay(day) {
+        selected = day;
+        const key = dateKey(day);
+        selectedHeading.textContent = dayFormat.format(day) + (key === dateKey(today) ? ' · 今日' : '');
+        for (const button of calendar.querySelectorAll('button')) {
+          button.setAttribute('aria-pressed', String(button.dataset.date === key));
+        }
+        for (const link of meals) {
+          link.href = '?' + new URLSearchParams({date: key, meal: link.dataset.meal});
+        }
+      }
+
+      function renderMonth(now, selectedDay) {
+        const year = month.getUTCFullYear();
+        const monthIndex = month.getUTCMonth();
+        const last = monthEnd(month);
+        monthHeading.textContent = year + '年' + (monthIndex + 1) + '月';
+        previous.disabled = npsArchiveDateState_(dateKey(monthEnd(monthStart(month, -1))), now) === 'rejected';
+        next.disabled = month.getTime() === monthStart(today).getTime();
+
+        const rows = document.createDocumentFragment();
+        const firstColumn = month.getUTCDay();
+        const cellCount = Math.ceil((firstColumn + last.getUTCDate()) / 7) * 7;
+        for (let index = 0; index < cellCount; index++) {
+          if (index % 7 === 0) rows.append(document.createElement('tr'));
+          const cell = document.createElement('td');
+          rows.lastElementChild.append(cell);
+          const dayNumber = index - firstColumn + 1;
+          if (dayNumber < 1 || dayNumber > last.getUTCDate()) continue;
+
+          const day = new Date(Date.UTC(year, monthIndex, dayNumber));
+          const key = dateKey(day);
+          const future = day > today;
+          const available = !future && npsArchiveDateState_(key, now) !== 'rejected';
+          const element = document.createElement(available ? 'button' : 'div');
+          element.className = 'nps-home-day' + (available ? '' : ' is-unavailable');
+          element.textContent = dayNumber;
+          if (available) {
+            element.type = 'button';
+            element.dataset.date = key;
+            element.setAttribute('aria-label', dayFormat.format(day));
+            if (day.getTime() === today.getTime()) element.setAttribute('aria-current', 'date');
+            element.addEventListener('click', () => selectDay(day));
+          } else {
+            const status = document.createElement('small');
+            if (future) status.textContent = '未来日';
+            else status.append('閲覧', document.createElement('br'), '期間外');
+            element.append(status);
+          }
+          cell.append(element);
+        }
+        calendar.replaceChildren(rows);
+        selectDay(selectedDay);
+      }
+
+      function refreshToday() {
+        const now = new Date();
+        const liveToday = getToday(now);
+        if (liveToday.getTime() === today.getTime()) return;
+        const wasToday = selected.getTime() === today.getTime();
+        today = liveToday;
+        if (wasToday || npsArchiveDateState_(dateKey(selected), now) === 'rejected') {
+          month = monthStart(today);
+          renderMonth(now, today);
+          return;
+        }
+        renderMonth(now, selected);
+      }
+
+      for (const button of [previous, next]) {
+        button.addEventListener('click', () => {
+          const now = new Date();
+          refreshToday();
+          if (button.disabled) return;
+          month = monthStart(month, Number(button.dataset.monthStep));
+          const last = monthEnd(month);
+          renderMonth(now, last > today ? today : last);
+          if (button.disabled) (button === next ? previous : next).focus();
+        });
+      }
+      window.addEventListener('pageshow', refreshToday);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshToday();
+      });
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('loader-box').style.display = 'none';
+      document.body.append(fragment);
+      renderMonth(initialNow, today);
+    }
+
     async function main() {
+      if (!window.location.search && !window.location.hash) return npsShowHome_();
       const preview = new URLSearchParams(window.location.search).get('errorPreview');
       if (['LIFF-01', 'VIEWER-01', 'VIEWER-02'].includes(preview)) {
         npsShowProductionError_(preview);
