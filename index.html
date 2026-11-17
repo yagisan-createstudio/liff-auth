@@ -162,12 +162,35 @@
     @media(prefers-reduced-motion:reduce){#production-loader.nps-c1-finish .production-launch-mark,#production-loader.nps-c1-finish .loader-text{animation:none;opacity:0}#production-loader.nps-c1-finish{animation-duration:.01ms}}
     .nps-production-error { width:min(100%,440px); padding:24px 16px; text-align:center; color:#171717; }
     .nps-production-error-icon { display:inline-grid; place-items:center; width:28px; height:28px; border:2px solid currentColor; border-radius:50%; color:#595959; font-size:17px; font-weight:700; line-height:1; margin-bottom:14px; }
+    .nps-store-error-lock {
+      position:relative; display:block; width:28px; height:28px;
+      margin:0 auto 14px; color:#595959;
+    }
+    .nps-store-error-lock::before {
+      content:""; position:absolute; left:8px; top:2px; width:12px; height:12px;
+      box-sizing:border-box; border:2px solid currentColor; border-radius:7px 7px 0 0;
+    }
+    .nps-store-error-lock-body {
+      position:absolute; inset:11px 4px 2px; box-sizing:border-box;
+      border:2px solid currentColor; border-radius:3px;
+    }
+    .nps-store-error-lock-body::after {
+      content:""; position:absolute; left:50%; top:3px; width:2px; height:5px;
+      margin-left:-1px; border-radius:2px; background:currentColor;
+    }
     .nps-production-error h1 { font-size:clamp(17px,5vw,22px); margin-bottom:10px; }
     .nps-production-error p { font-size:14px; line-height:1.85; color:#595959; }
     .nps-production-error .nps-production-error-code { margin-top:12px; font-size:12px; }
   </style>
 </head>
 <body>
+  <template id="nps-store-error-template">
+    <section class="nps-production-error" role="alert">
+      <span class="nps-store-error-lock" aria-hidden="true"><span class="nps-store-error-lock-body"></span></span>
+      <h1>アクセスが拒否されました</h1>
+      <p>恐れ入りますが、<br>この画面を一度閉じて、<br>配信メッセージの「レポートを見る」<br>ボタンから開き直してください。</p>
+    </section>
+  </template>
   <template id="nps-production-error-template">
     <section class="nps-production-error" role="alert">
       <span class="nps-production-error-icon" aria-hidden="true">!</span>
@@ -257,6 +280,23 @@
       }
 
       return null;
+    }
+
+    const NPS_PRIMARY_STORE_CODE = '4162';
+    function getStoreRequest_(location) {
+      const query = new URLSearchParams(location.search);
+      const sources = [query.getAll('store')];
+      for (const state of query.getAll('liff.state')) {
+        const start = state.indexOf('?');
+        if (start !== -1) {
+          sources.push(new URLSearchParams(state.slice(start + 1).split('#', 1)[0]).getAll('store'));
+        }
+      }
+      sources.push(new URLSearchParams(location.hash.slice(1)).getAll('store'));
+      const explicit = sources.some(values => values.length > 0);
+      const valid = sources.every(values => values.length === 0 ||
+        (values.length === 1 && values[0] === NPS_PRIMARY_STORE_CODE));
+      return {explicit, valid};
     }
 
     // New archive viewer: date=YYYYMMDD. Keep legacy app=archive closure independent.
@@ -510,6 +550,10 @@
     }
     async function main() {
       const preview = new URLSearchParams(window.location.search).get('errorPreview');
+      if (preview === 'STORE-01') {
+        npsShowProductionError_(preview);
+        return;
+      }
       if (['LIFF-01', 'VIEWER-01', 'VIEWER-02'].includes(preview)) {
         npsShowProductionError_(preview);
         return;
@@ -533,10 +577,15 @@
         }
         return;
       }
-      await npsOpenProduction_(dateState);
+      const store = getStoreRequest_(window.location);
+      if (!store.valid) {
+        npsShowProductionError_('STORE-01');
+        return;
+      }
+      await npsOpenProduction_(dateState, store.explicit);
     }
 
-    async function npsOpenProduction_(dateState) {
+    async function npsOpenProduction_(dateState, hasStore) {
       const loader = document.getElementById('production-loader-template');
       document.body.append(loader.content.cloneNode(true));
       document.getElementById('spinner').style.display = 'none';
@@ -597,6 +646,7 @@
           const previous = Number(sessionStorage.getItem(loginKey) || 0);
           if (previous && Date.now() - previous < 300000) throw new Error('LINEログインを完了できませんでした。5分後に開き直してください。');
           const returnUrl = new URL('https://yagisan-createstudio.github.io/liff-auth/');
+          if (hasStore) returnUrl.searchParams.set('store', NPS_PRIMARY_STORE_CODE);
           if (productionCheck_) returnUrl.searchParams.set('production','1');
           if (npsProductionDiagnostic_) returnUrl.searchParams.set('diagnostic','1');
           if (meal === 'L' || meal === 'D') returnUrl.searchParams.set('meal',meal);
@@ -649,8 +699,10 @@
       for (const id of ['spinner', 'loader-box', 'closure-notice']) {
         document.getElementById(id).style.display = 'none';
       }
-      const notice = document.getElementById('nps-production-error-template').content.cloneNode(true);
-      notice.querySelector('.nps-production-error-code').textContent = 'Error Code ' + code;
+      const templateId = code === 'STORE-01' ? 'nps-store-error-template' : 'nps-production-error-template';
+      const notice = document.getElementById(templateId).content.cloneNode(true);
+      const errorCode = notice.querySelector('.nps-production-error-code');
+      if (errorCode) errorCode.textContent = 'Error Code ' + code;
       document.body.append(notice);
     }
     function npsProductionError_(code, message){
