@@ -578,7 +578,7 @@
         return;
       }
       const store = getStoreRequest_(window.location);
-      if (!store.valid) {
+      if (!store.valid || (!store.explicit && !hasArchiveDate_)) {
         npsShowProductionError_('STORE-01');
         return;
       }
