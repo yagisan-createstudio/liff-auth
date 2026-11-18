@@ -178,38 +178,12 @@
       content:""; position:absolute; left:50%; top:3px; width:2px; height:5px;
       margin-left:-1px; border-radius:2px; background:currentColor;
     }
-    .nps-legacy-link-dialog {
-      position:fixed; inset:0; width:min(calc(100% - 32px),380px);
-      max-height:calc(100% - 32px); overflow:auto; margin:auto; padding:20px;
-      border:1px solid #e3e3de; border-radius:16px; background:#f7f7f4; color:#171717;
-      box-shadow:0 12px 40px #0002;
-    }
-    .nps-legacy-link-dialog::backdrop { background:#0005; }
-    .nps-legacy-link-dialog h2 { margin:0 0 8px; font-size:19px; }
-    .nps-legacy-link-dialog p { margin:0; color:#595959; font-size:14px; line-height:1.65; }
-    .nps-legacy-link-dialog ul { margin:12px 0; padding:0; list-style:none; }
-    .nps-legacy-link-dialog li { border-top:1px solid #e2e2de; }
-    .nps-legacy-link-dialog li > * { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:44px; font-size:14px; }
-    .nps-legacy-link-dialog a { color:#171717; text-underline-offset:3px; }
-    .nps-legacy-link-dialog li > span { color:#595959; }
-    .nps-legacy-link-dialog button {
-      width:100%; min-height:44px; border:1px solid #c9c9c3; border-radius:9px;
-      background:#fff; color:#171717; font-size:14px; cursor:pointer;
-    }
     .nps-production-error h1 { font-size:clamp(17px,5vw,22px); margin-bottom:10px; }
     .nps-production-error p { font-size:14px; line-height:1.85; color:#595959; }
     .nps-production-error .nps-production-error-code { margin-top:12px; font-size:12px; }
   </style>
 </head>
 <body>
-  <template id="nps-legacy-link-template">
-    <dialog class="nps-legacy-link-dialog" aria-labelledby="nps-legacy-link-title" aria-describedby="nps-legacy-link-description">
-      <h2 id="nps-legacy-link-title">閲覧リンクが変わりました</h2>
-      <p id="nps-legacy-link-description">仕様変更により、このリンクは使えなくなりました。閲覧する日付を選んでください。</p>
-      <ul></ul>
-      <form method="dialog"><button type="submit">閉じる</button></form>
-    </dialog>
-  </template>
   <template id="nps-store-error-template">
     <section class="nps-production-error" role="alert">
       <span class="nps-store-error-lock" aria-hidden="true"><span class="nps-store-error-lock-body"></span></span>
@@ -576,41 +550,6 @@
     }
     const NPS_LEGACY_REPORT_DATES_ = ['20261113', '20261114', '20261115', '20261116', '20261117'];
 
-    function npsShowLegacyLinkNotice_() {
-      const dialog = document.getElementById('nps-legacy-link-template').content.cloneNode(true).querySelector('dialog');
-      const dates = dialog.querySelector('ul');
-      const meal = String(getQueryParam('meal') || '').toUpperCase();
-      const now = new Date();
-      for (const date of NPS_LEGACY_REPORT_DATES_) {
-        const item = document.createElement('li');
-        const available = npsArchiveDateState_(date, now) !== 'rejected';
-        const entry = document.createElement(available ? 'a' : 'span');
-        if (available) {
-          const url = new URL('https://liff.line.me/' + MY_LIFF_ID);
-          url.searchParams.set('store', NPS_PRIMARY_STORE_CODE);
-          url.searchParams.set('date', date);
-          if (meal === 'L' || meal === 'D') url.searchParams.set('meal', meal);
-          entry.href = url.href;
-        }
-        const label = document.createElement('span');
-        label.textContent = Number(date.slice(4, 6)) + '月' + Number(date.slice(6)) + '日';
-        const action = document.createElement('span');
-        action.textContent = available ? 'ここをタップ' : '閲覧期間外';
-        entry.append(label, action);
-        item.append(entry);
-        dates.append(item);
-      }
-      document.body.append(dialog);
-      if (typeof dialog.showModal === 'function') dialog.showModal();
-      else {
-        dialog.setAttribute('open', '');
-        dialog.querySelector('form').addEventListener('submit', event => {
-          event.preventDefault();
-          dialog.remove();
-        });
-      }
-    }
-
     async function main() {
       const preview = new URLSearchParams(window.location.search).get('errorPreview');
       if (preview === 'STORE-01') {
@@ -641,17 +580,15 @@
         return;
       }
       const store = getStoreRequest_(window.location);
-      if (!store.valid || !store.explicit) {
+      const needsLegacyStore = !store.explicit && NPS_LEGACY_REPORT_DATES_.includes(archiveDateRaw_);
+      if (!store.valid || (!store.explicit && !needsLegacyStore)) {
         npsShowProductionError_('STORE-01');
-        if (!store.explicit && NPS_LEGACY_REPORT_DATES_.includes(archiveDateRaw_)) {
-          npsShowLegacyLinkNotice_();
-        }
         return;
       }
-      await npsOpenProduction_(dateState);
+      await npsOpenProduction_(dateState, needsLegacyStore);
     }
 
-    async function npsOpenProduction_(dateState) {
+    async function npsOpenProduction_(dateState, needsLegacyStore) {
       const loader = document.getElementById('production-loader-template');
       document.body.append(loader.content.cloneNode(true));
       document.getElementById('spinner').style.display = 'none';
@@ -702,6 +639,18 @@
           clearTimeout(initTimer);
         }
         if (npsProductionTiming_) npsProductionTiming_.liffEnded = npsProductionNow_();
+        if (needsLegacyStore) {
+          const store = getStoreRequest_(window.location);
+          if (!store.valid || String(getQueryParam('date') || '').trim() !== archiveDateRaw_) {
+            npsProductionError_('STORE-01', '旧リンクの店舗番号を補完できませんでした。');
+            return;
+          }
+          if (!store.explicit) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('store', NPS_PRIMARY_STORE_CODE);
+            window.history.replaceState(window.history.state, '', url.href);
+          }
+        }
         failureMessage='LINE認証を完了できませんでした。';
         npsProductionSetStage_('LINEのログイン状態を確認中');
 
