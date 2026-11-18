@@ -130,24 +130,21 @@
       position:absolute; inset:auto 12px calc(18px + env(safe-area-inset-bottom,0px));
       width:max-content; max-width:calc(100% - 24px); margin-inline:auto;
       display:flex; align-items:center; gap:8px; padding:8px 12px;
-      color:#633647;
+      color:#522437;
       font-size:13px; line-height:1.35; pointer-events:none;
-      animation:nps-store-toast-fade 3.5s ease-in-out both;
+      animation:nps-store-toast-pulse 2.8s ease-in-out infinite;
     }
-    .nps-store-toast strong { font-weight:650; color:#522437; }
     .nps-store-toast-icon { display:grid; gap:2px; width:16px; flex:none; }
     .nps-store-toast-icon::before,.nps-store-toast-icon::after {
       content:""; height:6px; border:1px solid currentColor; border-radius:2px;
       background:radial-gradient(circle at 3px 50%,currentColor 1px,transparent 1.2px);
     }
-    @keyframes nps-store-toast-fade {
-      0% { opacity:0; transform:translateY(3px); }
-      8%,92% { opacity:1; transform:translateY(0); }
-      100% { opacity:0; transform:translateY(3px); visibility:hidden; }
+    @keyframes nps-store-toast-pulse {
+      0%,100% { opacity:1; }
+      50% { opacity:.5; }
     }
-    @keyframes nps-store-toast-hide { to { visibility:hidden; } }
     @media (prefers-reduced-motion:reduce) {
-      .nps-store-toast { animation:nps-store-toast-hide 3.5s step-end both; }
+      .nps-store-toast { animation:none; }
     }
     .production-launch-mark {
       display: block;
@@ -251,7 +248,7 @@
   <div class="nps-store-toast" role="status">
     <span class="nps-store-toast-icon" aria-hidden="true"></span>
     <span lang="en">Server</span>
-    <strong>4162｜太宰府大佐野</strong>
+    <span>4162｜太宰府大佐野</span>
   </div>
   </div>
   </template>
