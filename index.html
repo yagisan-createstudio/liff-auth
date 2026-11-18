@@ -109,8 +109,11 @@
     .nps-archive-info-toggle {
       position:absolute; top:calc(17px + env(safe-area-inset-top,0px)); right:14px;
       width:44px; height:44px; display:grid; place-items:center; z-index:1;
-      border:0; background:transparent; color:#8b1446; cursor:pointer;
+      border:0; border-radius:50%; background:transparent; color:#8b1446; cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
     }
+    .nps-archive-info-toggle:focus:not(:focus-visible) { outline:none; }
+    .nps-archive-info-toggle:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
     .nps-archive-info-toggle span {
       width:22px; height:22px; display:grid; place-items:center; border:1.5px solid currentColor;
       border-radius:50%; font-size:14px; font-weight:700; line-height:1;
@@ -139,12 +142,32 @@
       content:""; height:6px; border:1px solid currentColor; border-radius:2px;
       background:radial-gradient(circle at 3px 50%,currentColor 1px,transparent 1.2px);
     }
+    .nps-store-toast-label { display:grid; text-align:center; }
+    .nps-store-toast-label > span {
+      grid-area:1/1; animation-duration:8.4s; animation-timing-function:steps(1,end);
+      animation-iteration-count:infinite;
+    }
+    .nps-store-toast-label [lang="ja"] { animation-name:nps-store-label-ja; }
+    .nps-store-toast-label [lang="en"] { visibility:hidden; animation-name:nps-store-label-en; }
+    .nps-store-toast-label [lang="ko"] { visibility:hidden; animation-name:nps-store-label-ko; }
     @keyframes nps-store-toast-pulse {
-      0%,100% { opacity:1; }
-      50% { opacity:.5; }
+      0%,38.75%,61.25%,100% { opacity:1; }
+      48%,52% { opacity:0; }
+    }
+    @keyframes nps-store-label-ja {
+      0%,83.333333%,100% { visibility:visible; }
+      16.666667% { visibility:hidden; }
+    }
+    @keyframes nps-store-label-en {
+      0%,50%,100% { visibility:hidden; }
+      16.666667% { visibility:visible; }
+    }
+    @keyframes nps-store-label-ko {
+      0%,83.333333%,100% { visibility:hidden; }
+      50% { visibility:visible; }
     }
     @media (prefers-reduced-motion:reduce) {
-      .nps-store-toast { animation:none; }
+      .nps-store-toast, .nps-store-toast-label > span { animation:none; }
     }
     .production-launch-mark {
       display: block;
@@ -247,7 +270,11 @@
   </div>
   <div class="nps-store-toast" role="status">
     <span class="nps-store-toast-icon" aria-hidden="true"></span>
-    <span lang="en">Server</span>
+    <span class="nps-store-toast-label">
+      <span lang="ja">接続先</span>
+      <span lang="en">Server</span>
+      <span lang="ko">서버</span>
+    </span>
     <span>4162｜太宰府大佐野</span>
   </div>
   </div>
