@@ -691,7 +691,7 @@
           const previous = Number(sessionStorage.getItem(loginKey) || 0);
           if (previous && Date.now() - previous < 300000) throw new Error('LINEログインを完了できませんでした。5分後に開き直してください。');
           const returnUrl = new URL('https://yagisan-createstudio.github.io/liff-auth/');
-          returnUrl.searchParams.set('store', NPS_PRIMARY_STORE_CODE);
+          if (!needsLegacyStore) returnUrl.searchParams.set('store', NPS_PRIMARY_STORE_CODE);
           if (productionCheck_) returnUrl.searchParams.set('production','1');
           if (npsProductionDiagnostic_) returnUrl.searchParams.set('diagnostic','1');
           if (meal === 'L' || meal === 'D') returnUrl.searchParams.set('meal',meal);
