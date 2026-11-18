@@ -618,7 +618,9 @@
 
     async function npsOpenProduction_(dateState, needsLegacyStore) {
       const loader = document.getElementById('production-loader-template');
-      document.body.append(loader.content.cloneNode(true));
+      const splash = loader.content.cloneNode(true);
+      if (needsLegacyStore) splash.querySelector('.nps-store-toast').remove();
+      document.body.append(splash);
       document.getElementById('spinner').style.display = 'none';
       document.getElementById('loader-box').style.display = 'none';
       document.title = dateState === 'archive' ? 'NPS Viewer | Archive Mode' : 'NPS Viewer';
