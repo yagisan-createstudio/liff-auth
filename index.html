@@ -578,14 +578,14 @@
         return;
       }
       const store = getStoreRequest_(window.location);
-      if (!store.valid || (!store.explicit && !hasArchiveDate_)) {
+      if (!store.valid || !store.explicit) {
         npsShowProductionError_('STORE-01');
         return;
       }
-      await npsOpenProduction_(dateState, store.explicit);
+      await npsOpenProduction_(dateState);
     }
 
-    async function npsOpenProduction_(dateState, hasStore) {
+    async function npsOpenProduction_(dateState) {
       const loader = document.getElementById('production-loader-template');
       document.body.append(loader.content.cloneNode(true));
       document.getElementById('spinner').style.display = 'none';
@@ -646,7 +646,7 @@
           const previous = Number(sessionStorage.getItem(loginKey) || 0);
           if (previous && Date.now() - previous < 300000) throw new Error('LINEログインを完了できませんでした。5分後に開き直してください。');
           const returnUrl = new URL('https://yagisan-createstudio.github.io/liff-auth/');
-          if (hasStore) returnUrl.searchParams.set('store', NPS_PRIMARY_STORE_CODE);
+          returnUrl.searchParams.set('store', NPS_PRIMARY_STORE_CODE);
           if (productionCheck_) returnUrl.searchParams.set('production','1');
           if (npsProductionDiagnostic_) returnUrl.searchParams.set('diagnostic','1');
           if (meal === 'L' || meal === 'D') returnUrl.searchParams.set('meal',meal);
