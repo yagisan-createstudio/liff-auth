@@ -20,6 +20,7 @@
       var now = Date.now();
       var active = now >= start && now < end;
       document.documentElement.classList.toggle('nps-maintenance-active', active);
+      if (active) document.title = 'メンテナンスのお知らせ';
       var next = now < start ? start : (active ? end : null);
       if (next !== null) {
         window.setTimeout(function () { window.location.reload(); }, Math.max(0, next - now + 50));
@@ -259,10 +260,15 @@
     html.nps-maintenance-active body > :not(#nps-maintenance-screen) { display:none !important; }
     #nps-maintenance-screen { display:none; position:fixed; inset:0; z-index:99999; color:#303238; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
     html.nps-maintenance-active #nps-maintenance-screen { display:block; }
-    .nps-maintenance-bg { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; }
-    .nps-maintenance-code { color:#333; font-size:clamp(76px,20vw,112px); font-weight:700; line-height:1; letter-spacing:-.04em; }
-    .nps-maintenance-title { margin-top:24px; color:#333; font-size:clamp(20px,5.3vw,28px); font-weight:500; }
-    .nps-maintenance-copy { margin-top:38px; color:#666; font-size:15px; line-height:2.05; }
+    .nps-maintenance-bg { position:absolute; inset:0; overflow:auto; background:#fff; color:#333; }
+    .nps-maintenance-content { width:calc(100% - 48px); max-width:600px; margin:15vh auto 0; padding-bottom:40px; text-align:center; }
+    .nps-maintenance-code { font-family:Arial,sans-serif; font-size:100px; font-weight:700; line-height:1.1; }
+    .nps-maintenance-title { margin:14px 0 32px; font-family:Arial,sans-serif; font-size:24px; line-height:1.5; font-weight:400; }
+    .nps-maintenance-bg p { font-size:13px; line-height:2; color:#666; }
+    .nps-maintenance-bg hr { border:0; border-top:1px solid #ddd; margin:32px 0 20px; }
+    .nps-maintenance-bg small { font-size:11px; color:#999; }
+    .nps-maintenance-terms { margin-top:12px; }
+    .nps-maintenance-terms a { font-size:12px; color:#777; text-decoration:underline; text-underline-offset:3px; }
     .nps-maintenance-scrim { position:absolute; inset:0; display:grid; place-items:center; padding:max(14px,env(safe-area-inset-top)) 16px max(14px,env(safe-area-inset-bottom)); background:rgba(15,15,15,.46); }
     .nps-maintenance-dialog { width:min(100%,470px); max-height:calc(100svh - 28px); overflow:auto; -webkit-overflow-scrolling:touch; padding:24px 24px 20px; border:1px solid #d4d4d4; border-top:4px solid #8c1d2c; border-radius:7px; background:#fff; box-shadow:0 12px 38px rgba(0,0,0,.22); text-align:left; }
     .nps-maintenance-eyebrow { display:inline-block; padding:4px 9px; border:1px solid #b77a81; border-radius:3px; color:#7d1c29; font-size:12px; font-weight:700; letter-spacing:.04em; }
@@ -298,9 +304,15 @@
   </template>
   <div id="nps-maintenance-screen" aria-live="polite">
     <main class="nps-maintenance-bg" aria-label="503 Service Unavailable">
-      <div class="nps-maintenance-code">503</div>
-      <div class="nps-maintenance-title">Service Unavailable</div>
-      <p class="nps-maintenance-copy">ただいまメンテナンス中です。<br>時間をおいて、再度アクセスしてください。</p>
+      <div class="nps-maintenance-content">
+        <div class="nps-maintenance-code">503</div>
+        <h1 class="nps-maintenance-title">Service Unavailable</h1>
+        <p>ただいまメンテナンス中です。</p>
+        <p>時間をおいて、再度アクセスしてください。</p>
+        <hr>
+        <small>store_code4162@Domo</small>
+        <div class="nps-maintenance-terms"><a href="https://yagisan-createstudio.github.io/terms_of_service/" target="_blank" rel="noopener noreferrer">利用規約</a></div>
+      </div>
     </main>
     <div class="nps-maintenance-scrim">
       <section class="nps-maintenance-dialog" role="dialog" aria-modal="true" aria-labelledby="nps-maintenance-heading">
