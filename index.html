@@ -169,6 +169,18 @@
     @media (prefers-reduced-motion:reduce) {
       .nps-store-toast, .nps-store-toast-label > span { animation:none; }
     }
+    .nps-language-picker { position:absolute; top:calc(16px + env(safe-area-inset-top,0px)); left:14px; z-index:3; }
+    .nps-language-trigger { min-height:38px; padding:7px 11px; border:1px solid rgba(139,20,70,.2); border-radius:999px; background:rgba(255,255,255,.78); color:#7a2449; font:600 12px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .nps-language-trigger:focus:not(:focus-visible) { outline:none; }
+    .nps-language-trigger:focus-visible,.nps-language-option:focus-visible { outline:2px solid #8b1446; outline-offset:2px; }
+    .nps-language-menu { position:absolute; top:calc(100% + 7px); left:0; display:grid; gap:2px; min-width:130px; padding:5px; border:1px solid #edc9d4; border-radius:12px; background:#fff; box-shadow:0 5px 18px rgba(86,38,58,.16); }
+    .nps-language-menu[hidden] { display:none; }
+    .nps-language-option { min-height:40px; padding:8px 10px; border:0; border-radius:8px; background:transparent; color:#334155; font:500 13px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; text-align:left; cursor:pointer; }
+    .nps-language-option[aria-pressed="true"] { background:#fff0f4; color:#8b1446; font-weight:700; }
+    .nps-store-toast-language-fixed .nps-store-toast-label > span { visibility:hidden !important; animation:none !important; }
+    .nps-store-toast-language-fixed .nps-store-toast-label > span.nps-language-active { visibility:visible !important; }
+    .nps-archive-launch-hint { left:70px; right:62px; width:auto; }
+    @media(max-width:380px) { .nps-archive-launch-hint { left:70px; right:62px; max-width:none; } }
     .production-launch-mark {
       display: block;
       width: min(60vw, 225px);
@@ -257,6 +269,14 @@
   </template>
   <template id="production-loader-template">
   <div class="production-loader" id="production-loader">
+  <div class="nps-language-picker">
+    <button type="button" class="nps-language-trigger" aria-haspopup="menu" aria-expanded="false" aria-label="表示言語">日本語⌄</button>
+    <div class="nps-language-menu" role="menu" aria-label="表示言語" hidden>
+      <button type="button" class="nps-language-option" role="menuitemradio" aria-checked="true" aria-pressed="true" data-language="ja">日本語</button>
+      <button type="button" class="nps-language-option" role="menuitemradio" aria-checked="false" aria-pressed="false" data-language="en">English</button>
+      <button type="button" class="nps-language-option" role="menuitemradio" aria-checked="false" aria-pressed="false" data-language="ko">한국어</button>
+    </div>
+  </div>
   <svg class="production-launch-mark" viewBox="0 0 274 167" role="img" aria-label="NPS Viewer"><path class="ink rise" style="--delay:0s" d="M 28,83 V 23 L 80,83 V 23"/>
 <path class="ink rise" style="--delay:.25s" d="M 110,83 V 23 H 135 C 153,23 163,30 163,43 C 163,56 153,63 135,63 H 110"/>
 <path class="ink rise" style="--delay:.50s" d="M 244,29 C 226,17 197,20 192,34 C 185,54 235,48 242,66 C 250,85 209,94 188,79"/><g class="viewer-word"><path class="ink rise" style="--delay:.50s" d="M 50,113 L 63,145 L 76,113"/>
@@ -303,6 +323,76 @@
   </main>
 
   <script>
+    const NPS_LANGUAGE_STORAGE_KEY_ = 'nps-viewer-language-v1';
+    const NPS_LANGUAGE_TEXT_ = {
+      ja: {label:'日本語', server:'接続先', launch:'アプリを起動しています', account:'アカウントの連携状態を確認中', viewer:'ビューアーを読み込んでいます', archive:'過去のレポートを開いています'},
+      en: {label:'English', server:'Server', launch:'Starting the app', account:'Checking account linking status', viewer:'Loading the viewer', archive:'Opening the archived report'},
+      ko: {label:'한국어', server:'서버', launch:'앱을 시작하고 있습니다', account:'계정 연동 상태를 확인하고 있습니다', viewer:'뷰어를 불러오고 있습니다', archive:'이전 보고서를 열고 있습니다'}
+    };
+    function npsReadLanguagePreference_(){
+      try { const value=localStorage.getItem(NPS_LANGUAGE_STORAGE_KEY_); return Object.prototype.hasOwnProperty.call(NPS_LANGUAGE_TEXT_,value)?value:null; }
+      catch(e) { return null; }
+    }
+    let npsSelectedLanguage_=npsReadLanguagePreference_();
+    let npsProductionStatusKey_='launch';
+    function npsSetProductionStatus_(key){
+      npsProductionStatusKey_=Object.prototype.hasOwnProperty.call(NPS_LANGUAGE_TEXT_.ja,key)?key:'launch';
+      const label=document.getElementById('nps-production-status');
+      if(label)label.textContent=NPS_LANGUAGE_TEXT_[npsSelectedLanguage_||'ja'][npsProductionStatusKey_];
+    }
+    function npsApplyLanguagePreference_(){
+      const language=npsSelectedLanguage_;
+      const picker=document.querySelector('.nps-language-picker');
+      if(!picker)return;
+      const trigger=picker.querySelector('.nps-language-trigger');
+      const menu=picker.querySelector('.nps-language-menu');
+      const options=picker.querySelectorAll('.nps-language-option');
+      const chosen=language||'ja';
+      trigger.textContent=NPS_LANGUAGE_TEXT_[chosen].label+'⌄';
+      trigger.setAttribute('aria-label',chosen==='ja'?'表示言語':chosen==='en'?'Display language':'표시 언어');
+      options.forEach(function(option){
+        const selected=option.dataset.language===chosen;
+        option.setAttribute('aria-checked',String(selected));
+        option.setAttribute('aria-pressed',String(selected));
+      });
+      const toast=document.querySelector('.nps-store-toast');
+      if(toast){
+        toast.classList.toggle('nps-store-toast-language-fixed',Boolean(language));
+        toast.querySelectorAll('.nps-store-toast-label [lang]').forEach(function(label){
+          label.classList.toggle('nps-language-active',Boolean(language)&&label.lang===language);
+        });
+      }
+      const status=document.getElementById('nps-production-status');
+      if(status)status.textContent=NPS_LANGUAGE_TEXT_[chosen][npsProductionStatusKey_];
+      if(menu)menu.hidden=true;
+      trigger.setAttribute('aria-expanded','false');
+    }
+    function npsInitLanguagePicker_(){
+      const picker=document.querySelector('.nps-language-picker');
+      if(!picker)return;
+      const trigger=picker.querySelector('.nps-language-trigger');
+      const menu=picker.querySelector('.nps-language-menu');
+      trigger.addEventListener('click',function(){
+        const open=menu.hidden;menu.hidden=!open;trigger.setAttribute('aria-expanded',String(open));
+      });
+      picker.querySelectorAll('.nps-language-option').forEach(function(option){
+        option.addEventListener('click',function(){
+          const language=option.dataset.language;
+          if(!Object.prototype.hasOwnProperty.call(NPS_LANGUAGE_TEXT_,language))return;
+          npsSelectedLanguage_=language;
+          try { localStorage.setItem(NPS_LANGUAGE_STORAGE_KEY_,language); } catch(e) { /* Keep this choice for the current page if storage is unavailable. */ }
+          npsApplyLanguagePreference_();
+        });
+      });
+      document.addEventListener('click',function(event){
+        if(!picker.contains(event.target)){menu.hidden=true;trigger.setAttribute('aria-expanded','false');}
+      });
+      picker.addEventListener('keydown',function(event){
+        if(event.key==='Escape'&&!menu.hidden){menu.hidden=true;trigger.setAttribute('aria-expanded','false');trigger.focus();}
+      });
+      npsApplyLanguagePreference_();
+    }
+
     const MY_LIFF_ID = '2011370236-GhC6I5kJ';
 
     // Temporarily use the same Apps Script as test Viewer A for the standard LIFF entry.
@@ -547,7 +637,7 @@
       if(!m||!r||event.source!==r.source||event.origin!==r.origin||m.challenge!==r.challenge)return;
       if(m.type==='nps-viewer-auth-check-v1'&&!npsC1Completed_){
         const label=document.getElementById('nps-production-status');
-        if(label)label.textContent='アカウントの連携状態を確認中';
+        if(label)npsSetProductionStatus_('account');
       }else if(m.type==='nps-viewer-initial-pdf-ready-v1'){
         npsC1FinishLoader_('PDF描画完了通知を受信');
       }else if(m.type==='nps-viewer-initial-pdf-error-v1'){
@@ -645,6 +735,7 @@
       const splash = loader.content.cloneNode(true);
       if (needsLegacyStore) splash.querySelector('.nps-store-toast').remove();
       document.body.append(splash);
+      npsInitLanguagePicker_();
       document.getElementById('spinner').style.display = 'none';
       document.getElementById('loader-box').style.display = 'none';
       document.title = dateState === 'archive' ? 'NPS Viewer | Archive Mode' : 'NPS Viewer';
@@ -674,7 +765,7 @@
         label.textContent = 'アーカイブ閲覧モード · ' + formattedDate;
         launchScreen.prepend(label);
         const status = document.getElementById('nps-production-status');
-        if (status) status.textContent = '過去のレポートを開いています';
+        if (status) npsSetProductionStatus_('archive');
       }
       npsProductionDiagnostic_ = getQueryParam('diagnostic') === '1';
       if (npsProductionDiagnostic_) npsProductionTiming_ = {started:0};
@@ -753,7 +844,7 @@
         }
         npsProductionSetStage_('ビューアーを読み込み中');
         const startupLabel=document.getElementById('nps-production-status');
-        if(startupLabel)startupLabel.textContent='ビューアーを読み込んでいます';
+        if(startupLabel)npsSetProductionStatus_('viewer');
         document.body.append(npsViewerFrame_);
         npsXWaitTimer_ = setTimeout(function(){
           if (npsPendingReceiver_) return;
