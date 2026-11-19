@@ -17,14 +17,14 @@
     .dialog { width:min(100%,470px); max-height:calc(100svh - 28px); overflow:auto; -webkit-overflow-scrolling:touch; padding:24px 24px 20px; border:1px solid #d4d4d4; border-top:4px solid #8c1d2c; border-radius:7px; background:#fff; box-shadow:0 12px 38px rgba(0,0,0,.22); text-align:left; animation:appear .18s ease-out both; }
     .eyebrow { display:inline-block; padding:4px 9px; border:1px solid #b77a81; border-radius:3px; color:#7d1c29; font-size:12px; font-weight:700; letter-spacing:.04em; }
     .dialog h1 { margin:13px 0 0; padding:0 0 16px; border-bottom:1px solid #d8d8d8; color:#202126; font-size:20px; font-weight:700; line-height:1.55; }
-    .dialog-copy { margin:17px 0 0; color:#42444a; font-size:14px; line-height:1.9; }
-    .impact { margin:17px 0 0; padding:14px 15px; border-left:3px solid #8c1d2c; background:#f7f5f5; color:#383a40; font-size:14px; line-height:1.85; }
+    .dialog-copy { margin:17px 0 0; color:#42444a; font-size:14px; line-height:1.9; text-align:left; }
+    .impact { margin:17px 0 0; padding:14px 15px; border-left:3px solid #8c1d2c; background:#f7f5f5; color:#383a40; font-size:14px; line-height:1.85; text-align:left; }
     .details { margin:17px 0 0; border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; }
     .details div { display:grid; grid-template-columns: minmax(112px, 38%) 1fr; gap:12px; padding:11px 2px; align-items:start; }
     .details div+div { border-top:1px solid #e7e7e7; }
     .details dt { color:#666; font-size:13px; }
     .details dd { margin:0; color:#292a2f; font-size:14px; font-weight:650; }
-    .closing { margin:16px 0 0; color:#484a50; font-size:14px; line-height:1.9; }
+    .closing { margin:16px 0 0; color:#484a50; font-size:14px; line-height:1.9; text-align:left; }
     button { display:block; width:100%; min-height:48px; margin-top:19px; border:1px solid #929292; border-radius:5px; background:#f7f7f7; color:#25262b; font:inherit; font-size:15px; font-weight:650; cursor:pointer; }
     button:focus-visible { outline:3px solid #777; outline-offset:3px; }
     body.dismissed .scrim { display:none; }
@@ -43,13 +43,13 @@
     <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="notice-title" aria-describedby="notice-copy">
       <span class="eyebrow">重要なお知らせ</span>
       <h1 id="notice-title">セキュリティメンテナンスに伴うサービス停止について</h1>
-      <p id="notice-copy" class="dialog-copy">現在、システムの安全性確認および保守作業を実施するため、NPS Viewerを一時的に停止しております。</p>
-      <p class="impact">メンテナンス期間中は、レポートの閲覧およびビューアーの各機能をご利用いただけません。</p>
+      <p id="notice-copy" class="dialog-copy">システムの安全性確認および保守作業のため、NPS Viewerを一時停止しております。</p>
+      <p class="impact">メンテナンス中は、レポートの閲覧を含むNPS Viewerのすべての機能をご利用いただけません。</p>
       <dl class="details">
         <div><dt>対象サービス</dt><dd>NPS Viewer</dd></div>
         <div><dt>サービス再開時期</dt><dd>未定</dd></div>
       </dl>
-      <p class="closing">作業が完了し、サービスの再開準備が整い次第、ご利用いただけるようになります。<br>ご不便をおかけいたしますが、再開まで今しばらくお待ちくださいますようお願いいたします。</p>
+      <p class="closing">作業が完了次第、サービスを再開いたします。<br>ご不便をおかけしますが、再開まで今しばらくお待ちください。</p>
       <button type="button" id="dismiss">確認しました</button>
     </section>
   </div>
