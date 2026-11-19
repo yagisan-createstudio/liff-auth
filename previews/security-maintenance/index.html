@@ -15,6 +15,8 @@
     .error-copy { margin-top:38px; color:#666; font-size:15px; line-height:2.05; }
     .scrim { position:fixed; inset:0; display:grid; place-items:center; padding:max(14px,env(safe-area-inset-top)) 16px max(14px,env(safe-area-inset-bottom)); background:rgba(15,15,15,.46); }
     .dialog { width:min(100%,470px); max-height:calc(100svh - 28px); overflow:auto; -webkit-overflow-scrolling:touch; padding:24px 24px 20px; border:1px solid #d4d4d4; border-top:4px solid #8c1d2c; border-radius:7px; background:#fff; box-shadow:0 12px 38px rgba(0,0,0,.22); text-align:left; animation:appear .18s ease-out both; }
+    .maintenance-notice-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:6px 10px; }
+    .maintenance-notice-header time { margin-left:auto; color:#626369; font-size:11px; text-align:right; }
     .eyebrow { display:inline-block; padding:4px 9px; border:1px solid #b77a81; border-radius:3px; color:#7d1c29; font-size:12px; font-weight:700; letter-spacing:.04em; }
     .dialog h1 { margin:13px 0 0; padding:0 0 16px; border-bottom:1px solid #d8d8d8; color:#202126; font-size:20px; font-weight:700; line-height:1.55; }
     .dialog-copy { margin:17px 0 0; color:#42444a; font-size:14px; line-height:1.9; text-align:left; }
@@ -42,7 +44,7 @@
   </main>
   <div class="scrim">
     <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="notice-title" aria-describedby="notice-copy">
-      <span class="eyebrow">重要なお知らせ</span>
+      <div class="maintenance-notice-header"><span class="eyebrow">重要なお知らせ</span><time datetime="2026-11-20T07:00:00+09:00">最終更新：2026年11月20日 7:00 JST</time></div>
       <h1 id="notice-title">セキュリティメンテナンスに伴う<br>サービス停止について</h1>
       <p id="notice-copy" class="dialog-copy">システムの安全性確認および保守作業のため、<br>以下のサービスを一時停止しております。</p>
       <dl class="details">
