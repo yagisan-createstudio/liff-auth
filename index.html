@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title id="page-title">NPS Viewer</title>
+  <title id="page-title">メンテナンスのお知らせ</title>
   <meta name="description" content="NPSレポートを閲覧できます。">
   <meta property="og:title" content="NPS Viewer">
   <meta property="og:description" content="NPSレポートを閲覧できます。">
@@ -20,7 +20,7 @@
       var now = Date.now();
       var active = now >= start && now < end;
       document.documentElement.classList.toggle('nps-maintenance-active', active);
-      if (active) document.title = 'メンテナンスのお知らせ';
+      document.title = active ? 'メンテナンスのお知らせ' : 'NPS Viewer';
       var next = now < start ? start : (active ? end : null);
       if (next !== null) {
         window.setTimeout(function () { window.location.reload(); }, Math.max(0, next - now + 50));
