@@ -3,49 +3,46 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#ffe0e5">
+  <meta name="theme-color" content="#f6f6f5">
   <title>Security Maintenance Preview | NPS Viewer</title>
   <style>
-    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #31333b; background: #ffe0e5; }
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #333; background: #f6f6f5; }
     * { box-sizing: border-box; }
-    body { min-height: 100svh; margin: 0; display: grid; place-items: center; padding: max(24px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom)); background: radial-gradient(ellipse at 16% 12%, #fff4f6 0, transparent 48%), radial-gradient(ellipse at 90% 90%, #f5cbd5 0, transparent 46%), #ffe0e5; }
-    .viewer { width: min(100%, 440px); min-height: min(680px, calc(100svh - 48px)); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-    .brand { color: #b80946; font-size: clamp(44px, 13vw, 66px); font-weight: 850; letter-spacing: -.065em; line-height: .95; }
-    .brand small { display: block; margin-top: 8px; font-size: .43em; letter-spacing: -.025em; }
-    .underlay-note { margin: 28px 0 0; color: #c62828; font-size: 16px; font-weight: 700; }
-    .scrim { position: fixed; inset: 0; display: grid; place-items: center; padding: 22px; background: rgb(31 24 28 / 38%); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
-    .dialog { width: min(100%, 390px); padding: 28px 24px 20px; border: 1px solid rgb(255 255 255 / 85%); border-radius: 24px; background: #fff; box-shadow: 0 20px 60px rgb(61 35 47 / 22%); text-align: center; animation: appear .24s ease-out both; }
-    .icon { width: 54px; height: 54px; margin: 0 auto 16px; display: grid; place-items: center; border-radius: 18px; color: #9c174d; background: #fff0f4; }
-    .icon svg { width: 29px; height: 29px; }
-    h1 { margin: 0; font-size: 20px; line-height: 1.45; letter-spacing: .01em; }
-    .copy { margin: 14px 0 0; color: #5d6069; font-size: 15px; line-height: 1.9; }
-    .period { display: inline-block; margin-top: 16px; padding: 8px 12px; border-radius: 10px; background: #f7f4f5; color: #51434a; font-size: 13px; line-height: 1.5; }
-    button { width: 100%; min-height: 48px; margin-top: 22px; border: 0; border-radius: 13px; background: #a9104c; color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
-    button:focus-visible { outline: 3px solid #d98cab; outline-offset: 3px; }
-    .after-note { display: none; margin: 14px 0 0; color: #68788c; font-size: 14px; line-height: 1.8; }
-    body.dismissed .scrim { display: none; }
-    body.dismissed .after-note { display: block; }
-    @keyframes appear { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-    @media (prefers-reduced-motion: reduce) { .dialog { animation: none; } }
+    body { min-height: 100svh; margin: 0; background: #f6f6f5; }
+    .maintenance-page { min-height: 100svh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:max(30px,env(safe-area-inset-top)) 22px max(30px,env(safe-area-inset-bottom)); text-align:center; }
+    .error-code { color:#333; font-size:clamp(76px,20vw,112px); font-weight:700; line-height:1; letter-spacing:-.04em; }
+    .error-title { margin-top:24px; color:#333; font-size:clamp(20px,5.3vw,28px); font-weight:500; }
+    .error-copy { margin-top:38px; color:#666; font-size:15px; line-height:2.05; }
+    .scrim { position:fixed; inset:0; display:grid; place-items:center; padding:22px; background:rgba(15,15,15,.42); }
+    .dialog { width:min(100%,430px); padding:25px 24px 20px; border-radius:8px; border:1px solid #d9d9d9; background:#fff; box-shadow:0 10px 34px rgba(0,0,0,.2); text-align:left; animation:appear .18s ease-out both; }
+    .dialog h1 { margin:0; padding:0 0 17px; border-bottom:1px solid #ddd; color:#222; font-size:19px; font-weight:700; line-height:1.5; }
+    .dialog-copy { margin:17px 0 0; color:#444; font-size:15px; line-height:1.9; }
+    .details { margin:18px 0 0; border-top:1px solid #e5e5e5; border-bottom:1px solid #e5e5e5; }
+    .details div { display:grid; grid-template-columns:1fr auto; gap:14px; padding:12px 2px; align-items:baseline; }
+    .details dt { color:#666; font-size:13px; }
+    .details dd { margin:0; color:#222; font-size:14px; font-weight:600; }
+    .wait-copy { margin:16px 0 0; color:#555; font-size:14px; line-height:1.8; }
+    button { display:block; width:100%; min-height:48px; margin-top:21px; border:1px solid #aaa; border-radius:5px; background:#f7f7f7; color:#222; font:inherit; font-size:15px; font-weight:600; cursor:pointer; }
+    button:focus-visible { outline:3px solid #777; outline-offset:3px; }
+    body.dismissed .scrim { display:none; }
+    @keyframes appear { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+    @media(prefers-reduced-motion:reduce){.dialog{animation:none}}
   </style>
 </head>
 <body>
-  <main class="viewer" aria-label="NPS Viewer maintenance preview">
-    <div class="brand" aria-label="NPS Viewer">NPS<small>Viewer</small></div>
-    <p class="underlay-note">ビューアーにアクセスできません</p>
-    <p class="after-note">セキュリティメンテナンスを実施しています。<br>再開まで今しばらくお待ちください。</p>
+  <main class="maintenance-page" aria-label="503 Service Unavailable">
+    <div class="error-code">503</div>
+    <div class="error-title">Service Unavailable</div>
+    <p class="error-copy">ただいまメンテナンス中です。<br>時間をおいて、再度アクセスしてください。</p>
   </main>
   <div class="scrim">
     <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="notice-title" aria-describedby="notice-copy">
-      <div class="icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M12 3.2 19 6v5.2c0 4.7-3 7.8-7 9.6-4-1.8-7-4.9-7-9.6V6l7-2.8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-          <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
       <h1 id="notice-title">セキュリティメンテナンスのお知らせ</h1>
-      <p id="notice-copy" class="copy">現在、システムの安全性確認および保守作業のため、<br>一時的にサービスを停止しております。<br>再開まで今しばらくお待ちください。</p>
-      <p class="period">終了時期は未定です。</p>
+      <p id="notice-copy" class="dialog-copy">現在、システムの安全性確認および保守作業のため、<br>一時的にサービスを停止しております。</p>
+      <dl class="details">
+        <div><dt>メンテナンス終了時期</dt><dd>未定</dd></div>
+      </dl>
+      <p class="wait-copy">再開まで今しばらくお待ちください。</p>
       <button type="button" id="dismiss">確認しました</button>
     </section>
   </div>
