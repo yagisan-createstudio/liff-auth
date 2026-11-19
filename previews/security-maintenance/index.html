@@ -12,7 +12,7 @@
     .viewer { width: min(100%, 440px); min-height: min(680px, calc(100svh - 48px)); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
     .brand { color: #b80946; font-size: clamp(44px, 13vw, 66px); font-weight: 850; letter-spacing: -.065em; line-height: .95; }
     .brand small { display: block; margin-top: 8px; font-size: .43em; letter-spacing: -.025em; }
-    .underlay-note { margin: 28px 0 0; color: #68788c; font-size: 15px; font-weight: 650; }
+    .underlay-note { margin: 28px 0 0; color: #c62828; font-size: 16px; font-weight: 700; }
     .scrim { position: fixed; inset: 0; display: grid; place-items: center; padding: 22px; background: rgb(31 24 28 / 38%); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
     .dialog { width: min(100%, 390px); padding: 28px 24px 20px; border: 1px solid rgb(255 255 255 / 85%); border-radius: 24px; background: #fff; box-shadow: 0 20px 60px rgb(61 35 47 / 22%); text-align: center; animation: appear .24s ease-out both; }
     .icon { width: 54px; height: 54px; margin: 0 auto 16px; display: grid; place-items: center; border-radius: 18px; color: #9c174d; background: #fff0f4; }
@@ -32,8 +32,8 @@
 <body>
   <main class="viewer" aria-label="NPS Viewer maintenance preview">
     <div class="brand" aria-label="NPS Viewer">NPS<small>Viewer</small></div>
-    <p class="underlay-note">セキュリティメンテナンス中です</p>
-    <p class="after-note">メンテナンス期間中は、レポートをご利用いただけません。終了時期は未定です。</p>
+    <p class="underlay-note">ビューアーにアクセスできません</p>
+    <p class="after-note">セキュリティメンテナンスを実施しています。<br>再開まで今しばらくお待ちください。</p>
   </main>
   <div class="scrim">
     <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="notice-title" aria-describedby="notice-copy">
@@ -44,8 +44,8 @@
         </svg>
       </div>
       <h1 id="notice-title">セキュリティメンテナンスのお知らせ</h1>
-      <p id="notice-copy" class="copy">セキュリティメンテナンスを実施しています。<br>メンテナンス期間中は、NPS Viewerをご利用いただけません。</p>
-      <p class="period">終了時期は未定です。<br>終了までしばらくお待ちください。</p>
+      <p id="notice-copy" class="copy">現在、システムの安全性確認および保守作業のため、<br>一時的にサービスを停止しております。<br>再開まで今しばらくお待ちください。</p>
+      <p class="period">終了時期は未定です。</p>
       <button type="button" id="dismiss">確認しました</button>
     </section>
   </div>
