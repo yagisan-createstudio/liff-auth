@@ -170,7 +170,9 @@
       .nps-store-toast, .nps-store-toast-label > span { animation:none; }
     }
     .nps-language-picker { position:absolute; top:calc(16px + env(safe-area-inset-top,0px)); left:14px; z-index:3; }
-    .nps-language-trigger { min-height:38px; padding:7px 11px; border:1px solid rgba(139,20,70,.2); border-radius:999px; background:rgba(255,255,255,.78); color:#7a2449; font:600 12px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .nps-language-trigger { width:42px; height:42px; padding:0; display:flex; align-items:center; justify-content:center; gap:2px; border:1px solid rgba(139,20,70,.2); border-radius:50%; background:rgba(255,255,255,.78); color:#7a2449; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .nps-language-trigger svg { width:19px; height:19px; display:block; flex:none; }
+    .nps-language-chevron { font:600 11px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
     .nps-language-trigger:focus:not(:focus-visible) { outline:none; }
     .nps-language-trigger:focus-visible,.nps-language-option:focus-visible { outline:2px solid #8b1446; outline-offset:2px; }
     .nps-language-menu { position:absolute; top:calc(100% + 7px); left:0; display:grid; gap:2px; min-width:130px; padding:5px; border:1px solid #edc9d4; border-radius:12px; background:#fff; box-shadow:0 5px 18px rgba(86,38,58,.16); }
@@ -270,7 +272,7 @@
   <template id="production-loader-template">
   <div class="production-loader" id="production-loader">
   <div class="nps-language-picker">
-    <button type="button" class="nps-language-trigger" aria-haspopup="menu" aria-expanded="false" aria-label="表示言語">日本語⌄</button>
+    <button type="button" class="nps-language-trigger" aria-haspopup="menu" aria-expanded="false" aria-label="表示言語：日本語を選択" title="表示言語：日本語を選択"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9.25" stroke="currentColor" stroke-width="1.7"/><path d="M3.2 12h17.6M12 2.75c2.2 2.45 3.3 5.53 3.3 9.25S14.2 18.8 12 21.25M12 2.75C9.8 5.2 8.7 8.28 8.7 12S9.8 18.8 12 21.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="nps-language-chevron" aria-hidden="true">⌄</span></button>
     <div class="nps-language-menu" role="menu" aria-label="表示言語" hidden>
       <button type="button" class="nps-language-option" role="menuitemradio" aria-checked="true" aria-pressed="true" data-language="ja">日本語</button>
       <button type="button" class="nps-language-option" role="menuitemradio" aria-checked="false" aria-pressed="false" data-language="en">English</button>
@@ -348,8 +350,9 @@
       const menu=picker.querySelector('.nps-language-menu');
       const options=picker.querySelectorAll('.nps-language-option');
       const chosen=language||'ja';
-      trigger.textContent=NPS_LANGUAGE_TEXT_[chosen].label+'⌄';
-      trigger.setAttribute('aria-label',chosen==='ja'?'表示言語':chosen==='en'?'Display language':'표시 언어');
+      const triggerLabel=chosen==='ja'?'表示言語：日本語を選択':chosen==='en'?'Display language: English':'표시 언어: 한국어';
+      trigger.setAttribute('aria-label',triggerLabel);
+      trigger.setAttribute('title',triggerLabel);
       options.forEach(function(option){
         const selected=option.dataset.language===chosen;
         option.setAttribute('aria-checked',String(selected));
