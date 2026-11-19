@@ -6,26 +6,30 @@
   <meta name="theme-color" content="#f6f6f5">
   <title>Security Maintenance Preview | NPS Viewer</title>
   <style>
-    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #333; background: #f6f6f5; }
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #303238; background: #f6f6f5; }
     * { box-sizing: border-box; }
     body { min-height: 100svh; margin: 0; background: #f6f6f5; }
     .maintenance-page { min-height: 100svh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:max(30px,env(safe-area-inset-top)) 22px max(30px,env(safe-area-inset-bottom)); text-align:center; }
     .error-code { color:#333; font-size:clamp(76px,20vw,112px); font-weight:700; line-height:1; letter-spacing:-.04em; }
     .error-title { margin-top:24px; color:#333; font-size:clamp(20px,5.3vw,28px); font-weight:500; }
     .error-copy { margin-top:38px; color:#666; font-size:15px; line-height:2.05; }
-    .scrim { position:fixed; inset:0; display:grid; place-items:center; padding:22px; background:rgba(15,15,15,.42); }
-    .dialog { width:min(100%,430px); padding:25px 24px 20px; border-radius:8px; border:1px solid #d9d9d9; background:#fff; box-shadow:0 10px 34px rgba(0,0,0,.2); text-align:left; animation:appear .18s ease-out both; }
-    .dialog h1 { margin:0; padding:0 0 17px; border-bottom:1px solid #ddd; color:#222; font-size:19px; font-weight:700; line-height:1.5; }
-    .dialog-copy { margin:17px 0 0; color:#444; font-size:15px; line-height:1.9; }
-    .details { margin:18px 0 0; border-top:1px solid #e5e5e5; border-bottom:1px solid #e5e5e5; }
-    .details div { display:grid; grid-template-columns:1fr auto; gap:14px; padding:12px 2px; align-items:baseline; }
+    .scrim { position:fixed; inset:0; display:grid; place-items:center; padding:max(14px,env(safe-area-inset-top)) 16px max(14px,env(safe-area-inset-bottom)); background:rgba(15,15,15,.46); }
+    .dialog { width:min(100%,470px); max-height:calc(100svh - 28px); overflow:auto; -webkit-overflow-scrolling:touch; padding:24px 24px 20px; border:1px solid #d4d4d4; border-top:4px solid #8c1d2c; border-radius:7px; background:#fff; box-shadow:0 12px 38px rgba(0,0,0,.22); text-align:left; animation:appear .18s ease-out both; }
+    .eyebrow { display:inline-block; padding:4px 9px; border:1px solid #b77a81; border-radius:3px; color:#7d1c29; font-size:12px; font-weight:700; letter-spacing:.04em; }
+    .dialog h1 { margin:13px 0 0; padding:0 0 16px; border-bottom:1px solid #d8d8d8; color:#202126; font-size:20px; font-weight:700; line-height:1.55; }
+    .dialog-copy { margin:17px 0 0; color:#42444a; font-size:14px; line-height:1.9; }
+    .impact { margin:17px 0 0; padding:14px 15px; border-left:3px solid #8c1d2c; background:#f7f5f5; color:#383a40; font-size:14px; line-height:1.85; }
+    .details { margin:17px 0 0; border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; }
+    .details div { display:grid; grid-template-columns: minmax(112px, 38%) 1fr; gap:12px; padding:11px 2px; align-items:start; }
+    .details div+div { border-top:1px solid #e7e7e7; }
     .details dt { color:#666; font-size:13px; }
-    .details dd { margin:0; color:#222; font-size:14px; font-weight:600; }
-    .wait-copy { margin:16px 0 0; color:#555; font-size:14px; line-height:1.8; }
-    button { display:block; width:100%; min-height:48px; margin-top:21px; border:1px solid #aaa; border-radius:5px; background:#f7f7f7; color:#222; font:inherit; font-size:15px; font-weight:600; cursor:pointer; }
+    .details dd { margin:0; color:#292a2f; font-size:14px; font-weight:650; }
+    .closing { margin:16px 0 0; color:#484a50; font-size:14px; line-height:1.9; }
+    button { display:block; width:100%; min-height:48px; margin-top:19px; border:1px solid #929292; border-radius:5px; background:#f7f7f7; color:#25262b; font:inherit; font-size:15px; font-weight:650; cursor:pointer; }
     button:focus-visible { outline:3px solid #777; outline-offset:3px; }
     body.dismissed .scrim { display:none; }
     @keyframes appear { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+    @media(max-width:380px) { .dialog { padding:20px 18px 17px; } .dialog h1 { font-size:18px; } .dialog-copy,.impact,.closing { font-size:13px; } }
     @media(prefers-reduced-motion:reduce){.dialog{animation:none}}
   </style>
 </head>
@@ -37,12 +41,15 @@
   </main>
   <div class="scrim">
     <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="notice-title" aria-describedby="notice-copy">
-      <h1 id="notice-title">セキュリティメンテナンスのお知らせ</h1>
-      <p id="notice-copy" class="dialog-copy">現在、システムの安全性確認および保守作業のため、<br>一時的にサービスを停止しております。</p>
+      <span class="eyebrow">重要なお知らせ</span>
+      <h1 id="notice-title">セキュリティメンテナンスに伴うサービス停止について</h1>
+      <p id="notice-copy" class="dialog-copy">現在、システムの安全性確認および保守作業を実施するため、NPS Viewerを一時的に停止しております。</p>
+      <p class="impact">メンテナンス期間中は、レポートの閲覧およびビューアーの各機能をご利用いただけません。</p>
       <dl class="details">
-        <div><dt>メンテナンス終了時期</dt><dd>未定</dd></div>
+        <div><dt>対象サービス</dt><dd>NPS Viewer</dd></div>
+        <div><dt>サービス再開時期</dt><dd>未定</dd></div>
       </dl>
-      <p class="wait-copy">再開まで今しばらくお待ちください。</p>
+      <p class="closing">作業が完了し、サービスの再開準備が整い次第、ご利用いただけるようになります。<br>ご不便をおかけいたしますが、再開まで今しばらくお待ちくださいますようお願いいたします。</p>
       <button type="button" id="dismiss">確認しました</button>
     </section>
   </div>
