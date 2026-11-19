@@ -11,6 +11,21 @@
   <link rel="preconnect" href="https://static.line-scdn.net" crossorigin>
   <link rel="dns-prefetch" href="//script.google.com">
   <link rel="dns-prefetch" href="//script.googleusercontent.com">
+  <script>
+    // Start and end are fixed JST instants. Reload at each boundary so an already-open
+    // entry cannot continue into the maintenance window or remain blocked after it.
+    (function () {
+      var start = Date.parse('2026-11-20T00:00:00+09:00');
+      var end = Date.parse('2026-11-20T13:00:00+09:00');
+      var now = Date.now();
+      var active = now >= start && now < end;
+      document.documentElement.classList.toggle('nps-maintenance-active', active);
+      var next = now < start ? start : (active ? end : null);
+      if (next !== null) {
+        window.setTimeout(function () { window.location.reload(); }, Math.max(0, next - now + 50));
+      }
+    })();
+  </script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -237,6 +252,32 @@
     .nps-production-error h1 { font-size:clamp(17px,5vw,22px); margin-bottom:10px; }
     .nps-production-error p { font-size:14px; line-height:1.85; color:#595959; }
     .nps-production-error .nps-production-error-code { margin-top:12px; font-size:12px; }
+
+    /* Scheduled maintenance window for the NPS Viewer entry (JST). */
+    html.nps-maintenance-active, html.nps-maintenance-active body { width:100%; height:100%; overflow:hidden; background:#f6f6f5; }
+    html.nps-maintenance-active body { display:block; }
+    html.nps-maintenance-active body > :not(#nps-maintenance-screen) { display:none !important; }
+    #nps-maintenance-screen { display:none; position:fixed; inset:0; z-index:99999; color:#303238; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    html.nps-maintenance-active #nps-maintenance-screen { display:block; }
+    .nps-maintenance-bg { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; }
+    .nps-maintenance-code { color:#333; font-size:clamp(76px,20vw,112px); font-weight:700; line-height:1; letter-spacing:-.04em; }
+    .nps-maintenance-title { margin-top:24px; color:#333; font-size:clamp(20px,5.3vw,28px); font-weight:500; }
+    .nps-maintenance-copy { margin-top:38px; color:#666; font-size:15px; line-height:2.05; }
+    .nps-maintenance-scrim { position:absolute; inset:0; display:grid; place-items:center; padding:max(14px,env(safe-area-inset-top)) 16px max(14px,env(safe-area-inset-bottom)); background:rgba(15,15,15,.46); }
+    .nps-maintenance-dialog { width:min(100%,470px); max-height:calc(100svh - 28px); overflow:auto; -webkit-overflow-scrolling:touch; padding:24px 24px 20px; border:1px solid #d4d4d4; border-top:4px solid #8c1d2c; border-radius:7px; background:#fff; box-shadow:0 12px 38px rgba(0,0,0,.22); text-align:left; }
+    .nps-maintenance-eyebrow { display:inline-block; padding:4px 9px; border:1px solid #b77a81; border-radius:3px; color:#7d1c29; font-size:12px; font-weight:700; letter-spacing:.04em; }
+    .nps-maintenance-dialog h1 { margin:13px 0 0; padding:0 0 16px; border-bottom:1px solid #d8d8d8; color:#202126; font-size:20px; font-weight:700; line-height:1.55; }
+    .nps-maintenance-dialog p { margin:17px 0 0; color:#42444a; font-size:14px; line-height:1.9; }
+    .nps-maintenance-impact { padding:14px 15px; border-left:3px solid #8c1d2c; background:#f7f5f5; color:#383a40 !important; }
+    .nps-maintenance-details { margin:17px 0 0; border-top:1px solid #dcdcdc; border-bottom:1px solid #dcdcdc; }
+    .nps-maintenance-details div { display:grid; grid-template-columns:minmax(112px,38%) 1fr; gap:12px; padding:11px 2px; align-items:start; }
+    .nps-maintenance-details div+div { border-top:1px solid #e7e7e7; }
+    .nps-maintenance-details dt { color:#666; font-size:13px; }
+    .nps-maintenance-details dd { margin:0; color:#292a2f; font-size:14px; font-weight:650; }
+    .nps-maintenance-dialog button { display:block; width:100%; min-height:48px; margin-top:19px; border:1px solid #929292; border-radius:5px; background:#f7f7f7; color:#25262b; font:inherit; font-size:15px; font-weight:650; cursor:pointer; }
+    .nps-maintenance-dialog button:focus-visible { outline:3px solid #777; outline-offset:3px; }
+    #nps-maintenance-screen.dismissed .nps-maintenance-scrim { display:none; }
+    @media(max-width:380px) { .nps-maintenance-dialog { padding:20px 18px 17px; } .nps-maintenance-dialog h1 { font-size:18px; } .nps-maintenance-dialog p { font-size:13px; } }
   </style>
 </head>
 <body>
@@ -255,6 +296,28 @@
       <p class="nps-production-error-code" lang="en"></p>
     </section>
   </template>
+  <div id="nps-maintenance-screen" aria-live="polite">
+    <main class="nps-maintenance-bg" aria-label="503 Service Unavailable">
+      <div class="nps-maintenance-code">503</div>
+      <div class="nps-maintenance-title">Service Unavailable</div>
+      <p class="nps-maintenance-copy">ただいまメンテナンス中です。<br>時間をおいて、再度アクセスしてください。</p>
+    </main>
+    <div class="nps-maintenance-scrim">
+      <section class="nps-maintenance-dialog" role="dialog" aria-modal="true" aria-labelledby="nps-maintenance-heading">
+        <span class="nps-maintenance-eyebrow">重要なお知らせ</span>
+        <h1 id="nps-maintenance-heading">セキュリティメンテナンスに伴う<br>サービス停止について</h1>
+        <p>システムの安全性確認および保守作業のため、<br>NPS Viewerを一時停止しております。</p>
+        <p class="nps-maintenance-impact">メンテナンス中は、レポートの閲覧を含む<br>すべての機能をご利用いただけません。</p>
+        <dl class="nps-maintenance-details">
+          <div><dt>対象サービス</dt><dd>NPS Viewer<br>NPS Claude</dd></div>
+          <div><dt>メンテナンス開始時刻</dt><dd>2026年11月20日 0:00<br>（日本時間）</dd></div>
+          <div><dt>サービス再開予定</dt><dd>2026年11月20日 13:00<br>（日本時間）</dd></div>
+        </dl>
+        <p>作業が完了次第、サービスを再開いたします。<br>ご不便をおかけしますが、<br>再開まで今しばらくお待ちください。</p>
+        <button type="button" id="nps-maintenance-dismiss">確認しました</button>
+      </section>
+    </div>
+  </div>
   <div class="app-spinner" id="spinner"></div>
   <div class="loader-text" id="loader-box">
     <span id="status-text">起動中</span><span class="dots-bounce"><span>.</span><span>.</span><span>.</span></span>
@@ -695,6 +758,7 @@
     const NPS_LEGACY_REPORT_DATES_ = ['20261113', '20261114', '20261115', '20261116', '20261117'];
 
     async function main() {
+      if (document.documentElement.classList.contains('nps-maintenance-active')) return;
       const preview = new URLSearchParams(window.location.search).get('errorPreview');
       if (preview === 'STORE-01') {
         npsShowProductionError_(preview);
@@ -877,6 +941,10 @@
       npsProductionSetStage_(message);
       npsShowProductionError_(code);
     }
+    document.getElementById('nps-maintenance-dismiss').addEventListener('click', function () {
+      document.getElementById('nps-maintenance-screen').classList.add('dismissed');
+    });
+
     // Begin as soon as the DOM is ready; do not wait for images and other subresources.
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', main, {once:true});
