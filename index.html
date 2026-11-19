@@ -279,6 +279,8 @@
     .nps-maintenance-details div+div { border-top:1px solid #e7e7e7; }
     .nps-maintenance-details dt { color:#666; font-size:13px; }
     .nps-maintenance-details dd { margin:0; color:#292a2f; font-size:14px; font-weight:650; }
+    .nps-maintenance-details .previous-restart { display:block; margin-top:4px; color:#626369; font-size:12px; font-weight:400; }
+    .nps-maintenance-details dd span { white-space:nowrap; }
     .nps-maintenance-dialog button { display:block; width:100%; min-height:48px; margin-top:19px; border:1px solid #929292; border-radius:5px; background:#f7f7f7; color:#25262b; font:inherit; font-size:15px; font-weight:650; cursor:pointer; }
     .nps-maintenance-dialog button:focus-visible { outline:3px solid #777; outline-offset:3px; }
     #nps-maintenance-screen.dismissed .nps-maintenance-scrim { display:none; }
@@ -320,8 +322,8 @@
         <p>システムの安全性確認および保守作業のため、<br>以下のサービスを一時停止しております。</p>
         <dl class="nps-maintenance-details">
           <div><dt>対象サービス</dt><dd>NPS Viewer<br>NPS Claude Scan</dd></div>
-          <div><dt>メンテナンス開始時刻</dt><dd>2026年11月20日 0:00 JST</dd></div>
-          <div><dt>サービス再開予定</dt><dd><del>2026年11月20日 13:00 JST</del><br>未定</dd></div>
+          <div><dt>メンテナンス開始時刻</dt><dd>2026年11月20日 <span>0:00 JST</span></dd></div>
+          <div><dt>サービス再開予定</dt><dd>未定<small class="previous-restart">当初予定：<del>2026年11月20日 <span>13:00 JST</span></del></small></dd></div>
         </dl>
         <p>作業が完了次第、サービスを再開いたします。<br>ご不便をおかけしますが、<br>再開まで今しばらくお待ちください。</p>
         <button type="button" id="nps-maintenance-dismiss">確認しました</button>
