@@ -960,6 +960,41 @@
       document.getElementById('nps-maintenance-screen').classList.add('dismissed');
     });
 
+    // Hidden maintenance shortcut. This is navigation only, not authorization.
+    // The viewer's normal LINE/server-side authentication remains mandatory.
+    (function () {
+      var sequence = ['tl', 'br', 'tr', 'bl'];
+      var position = 0;
+      var lastTap = 0;
+      var unlocked = false;
+      document.addEventListener('pointerdown', function (event) {
+        if (unlocked || !document.documentElement.classList.contains('nps-maintenance-active')) return;
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        var x = event.clientX, y = event.clientY;
+        var w = document.documentElement.clientWidth, h = window.innerHeight;
+        var edge = Math.min(64, Math.max(44, Math.min(w, h) * 0.12));
+        var corner = null;
+        if (x <= edge && y <= edge) corner = 'tl';
+        else if (x >= w - edge && y >= h - edge) corner = 'br';
+        else if (x >= w - edge && y <= edge) corner = 'tr';
+        else if (x <= edge && y >= h - edge) corner = 'bl';
+        var now = Date.now();
+        if (now - lastTap > 10000) position = 0;
+        lastTap = now;
+        if (corner === sequence[position]) {
+          position++;
+          if (position === sequence.length) {
+            unlocked = true;
+            document.documentElement.classList.remove('nps-maintenance-active');
+            document.title = 'NPS Viewer';
+            main();
+          }
+        } else {
+          position = corner === sequence[0] ? 1 : 0;
+        }
+      }, {passive:true, capture:true});
+    })();
+
     // Begin as soon as the DOM is ready; do not wait for images and other subresources.
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', main, {once:true});
