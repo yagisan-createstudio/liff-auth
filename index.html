@@ -28,7 +28,9 @@
       } catch (_) {}
       document.documentElement.classList.toggle('nps-maintenance-active', active);
       document.title = active ? 'メンテナンスのお知らせ' : 'NPS Viewer';
-      if (!active) {
+      // Schedule the maintenance start only while it is still in the future.
+      // A LINE-auth handoff after the start must NOT trigger an immediate reload.
+      if (now < start) {
         window.setTimeout(function () { window.location.reload(); }, Math.max(0, start - now + 50));
       }
     })();
