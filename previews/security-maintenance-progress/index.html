@@ -36,6 +36,11 @@
     .progress-dot { width:8px; height:8px; margin-top:5px; flex-shrink:0; border-radius:50%; background:#ab893f; }
     .progress-title { margin:0; color:#303238; font-size:13px; font-weight:650; line-height:1.6; }
     .progress-copy { margin:5px 0 0; color:#56585d; font-size:12px; line-height:1.75; }
+    .history-toggle { min-height:36px; margin-top:13px; border:0; border-top:1px solid #e1e1e1; border-radius:0; background:transparent; color:#52545b; font-size:12px; font-weight:650; }
+    .history-toggle[aria-expanded="true"] { color:#303238; }
+    .progress-dot.completed { background:#56816a; }
+    .history-status { display:inline-block; margin-left:7px; color:#426c55; font-size:11px; font-weight:650; }
+    .history-extra[hidden] { display:none; }
     .preview-note { padding:7px 10px; background:#f3f3f3; border-bottom:1px solid #dcdcdc; text-align:center; color:#6a6a6a; font-size:11px; }
     .closing { margin:16px 0 0; color:#484a50; font-size:14px; line-height:1.9; text-align:left; }
     button { display:block; width:100%; min-height:48px; margin-top:19px; border:1px solid #929292; border-radius:5px; background:#f7f7f7; color:#25262b; font:inherit; font-size:15px; font-weight:650; cursor:pointer; }
@@ -71,12 +76,29 @@
             <p class="progress-copy">検証環境において、意図しない動作や任意コード実行につながる問題がないか確認しています。</p>
           </div>
         </div>
+        <div class="history-extra" id="progress-history" hidden>
+          <div class="progress-item">
+            <span class="progress-dot completed" aria-hidden="true"></span>
+            <div>
+              <p class="progress-title">セキュリティパッチの適用<span class="history-status">完了済み</span></p>
+              <p class="progress-copy">セキュリティパッチの適用作業が完了しました。</p>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="history-toggle" id="history-toggle" aria-expanded="false" aria-controls="progress-history">すべての履歴を表示</button>
       </section>
       <p class="closing">作業が完了次第、サービスを再開いたします。<br>ご不便をおかけしますが、<br>再開まで今しばらくお待ちください。</p>
       <button type="button" id="dismiss">確認しました</button>
     </section>
   </div>
   <script>
+    document.getElementById('history-toggle').addEventListener('click', function () {
+      const history = document.getElementById('progress-history');
+      const expanded = this.getAttribute('aria-expanded') === 'true';
+      history.hidden = expanded;
+      this.setAttribute('aria-expanded', String(!expanded));
+      this.textContent = expanded ? 'すべての履歴を表示' : '履歴を閉じる';
+    });
     document.getElementById('dismiss').addEventListener('click', function () {
       document.body.classList.add('dismissed');
     });
