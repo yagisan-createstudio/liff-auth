@@ -18,6 +18,13 @@
       var start = Date.parse('2026-11-20T00:00:00+09:00');
       var now = Date.now();
       var active = now >= start;
+      // Preserve a successful four-corner entry across the LINE login redirect.
+      // This is only a temporary UI state, never an authentication grant.
+      try {
+        var bypassUntil = Number(sessionStorage.getItem('nps-maintenance-entry-until') || 0);
+        if (bypassUntil > now && bypassUntil - now <= 120000) active = false;
+        else sessionStorage.removeItem('nps-maintenance-entry-until');
+      } catch (_) {}
       document.documentElement.classList.toggle('nps-maintenance-active', active);
       document.title = active ? 'メンテナンスのお知らせ' : 'NPS Viewer';
       if (!active) {
@@ -1103,6 +1110,9 @@
           position++;
           if (position === sequence.length) {
             unlocked = true;
+            // LINE login may reload this entry page; retain UI access briefly
+            // within this browser tab so the 503 notice does not return.
+            try { sessionStorage.setItem('nps-maintenance-entry-until', String(Date.now() + 120000)); } catch (_) {}
             // Hide and detach the entire 503 notice before revealing the viewer.
             // This prevents a stale maintenance dialog from flashing during startup.
             var maintenanceScreen = document.getElementById('nps-maintenance-screen');
