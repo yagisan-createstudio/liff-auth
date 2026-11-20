@@ -1109,6 +1109,14 @@
           position++;
           if (position === sequence.length) {
             unlocked = true;
+            // Hide and detach the entire 503 notice before revealing the viewer.
+            // This prevents a stale maintenance dialog from flashing during startup.
+            var maintenanceScreen = document.getElementById('nps-maintenance-screen');
+            if (maintenanceScreen) {
+              maintenanceScreen.style.setProperty('display', 'none', 'important');
+              maintenanceScreen.setAttribute('aria-hidden', 'true');
+              maintenanceScreen.remove();
+            }
             document.documentElement.classList.remove('nps-maintenance-active');
             document.title = 'NPS Viewer';
             main();
