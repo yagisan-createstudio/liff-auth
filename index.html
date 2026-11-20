@@ -314,6 +314,8 @@
     .nps-history-header h1 { margin:0; padding:0; border:0; font-size:19px; }
     .nps-history-list { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
     .nps-history-row { padding:14px 2px; border-bottom:1px solid #e7e7e7; }
+    .nps-history-row.nps-history-paired { border-left:2px solid #b8bec8; padding-left:12px; margin-left:2px; }
+    .nps-history-row.nps-history-paired.nps-history-pair-end { border-bottom-color:#d3d7dd; }
     .nps-history-row .nps-progress-item { margin:0; }
     .nps-history-footer button { margin-top:10px; }
     .nps-history-extra[hidden] { display:none; }
@@ -454,18 +456,18 @@
           <h1 id="nps-history-title">作業進捗</h1>
         </div>
         <div class="nps-history-list" tabindex="0">
-          <div class="nps-history-row">
+          <div class="nps-history-row nps-history-paired">
             <time class="nps-history-time" datetime="2026-11-20T19:05:00+09:00">11月20日 19:05 JST</time>
             <div class="nps-progress-item"><span class="nps-progress-dot failed" aria-hidden="true"></span><div>
-              <p class="nps-progress-title">LINE認証に関するセキュリティ審査<span class="nps-history-status failed">審査未通過</span></p>
-              <p class="nps-progress-copy">初期パスワードが変更されていないユーザーアカウントとLINE IDの紐付けについて、セキュリティ上の指摘を受けました。既存のログイン状態への影響を考慮し、対応方針を検討しています。</p>
+              <p class="nps-progress-title">LINE認証の仕様変更に伴う審査<span class="nps-history-status failed">審査未通過</span></p>
+              <p class="nps-progress-copy">審査の結果、初期パスワードが変更されていないユーザーアカウントとLINE IDの紐付けについて指摘を受けました。既存のログイン状態への影響を考慮し、対応方針を検討しています。</p>
             </div></div>
           </div>
-          <div class="nps-history-row">
+          <div class="nps-history-row nps-history-paired nps-history-pair-end">
             <time class="nps-history-time" datetime="2026-11-20T18:30:00+09:00">11月20日 18:30 JST</time>
             <div class="nps-progress-item"><span class="nps-progress-dot" aria-hidden="true"></span><div>
-              <p class="nps-progress-title">LINE認証に関するセキュリティ審査<span class="nps-history-status">審査結果待ち</span></p>
-              <p class="nps-progress-copy">サービス再開に向け、LINE認証に関するセキュリティ審査の結果を待っていました。</p>
+              <p class="nps-progress-title">LINE認証の仕様変更に伴う審査<span class="nps-history-status">審査申請</span></p>
+              <p class="nps-progress-copy">サービス再開に向け、LINE認証に関する仕様変更について審査を申請しました。</p>
             </div></div>
           </div>
           <div class="nps-history-row">
@@ -482,14 +484,14 @@
               <p class="nps-progress-copy">セキュリティ検証期間中に隔離された環境で保管していた利用者データの移管が完了しました。</p>
             </div></div>
           </div>
-          <div class="nps-history-row">
+          <div class="nps-history-row nps-history-paired">
             <time class="nps-history-time" datetime="2026-11-20T16:48:00+09:00">11月20日 16:48 JST</time>
             <div class="nps-progress-item"><span class="nps-progress-dot completed" aria-hidden="true"></span><div>
               <p class="nps-progress-title">外部からの攻撃を想定したセキュリティ再検証<span class="nps-history-status">合格</span></p>
               <p class="nps-progress-copy">再検証が終了し、所定の検証項目に合格したことを確認しました。</p>
             </div></div>
           </div>
-          <div class="nps-history-row">
+          <div class="nps-history-row nps-history-paired nps-history-pair-end">
             <time class="nps-history-time" datetime="2026-11-20T13:05:00+09:00">11月20日 13:05 JST</time>
             <div class="nps-progress-item"><span class="nps-progress-dot completed" aria-hidden="true"></span><div>
               <p class="nps-progress-title">外部からの攻撃を想定したセキュリティ再検証<span class="nps-history-status">検証開始</span></p>
@@ -503,14 +505,14 @@
               <p class="nps-progress-copy">検証結果を踏まえたセキュリティパッチの見直しと最適化が完了しました。</p>
             </div></div>
           </div>
-          <div class="nps-history-row">
+          <div class="nps-history-row nps-history-paired">
             <time class="nps-history-time" datetime="2026-11-20T09:28:00+09:00">11月20日 9:28 JST</time>
             <div class="nps-progress-item"><span class="nps-progress-dot failed" aria-hidden="true"></span><div>
               <p class="nps-progress-title">外部からの攻撃を想定したセキュリティ検証<span class="nps-history-status failed">不合格</span></p>
               <p class="nps-progress-copy">検証が終了し、改善が必要な項目を確認しました。</p>
             </div></div>
           </div>
-          <div class="nps-history-row">
+          <div class="nps-history-row nps-history-paired nps-history-pair-end">
             <time class="nps-history-time" datetime="2026-11-20T07:00:00+09:00">11月20日 7:00 JST</time>
             <div class="nps-progress-item"><span class="nps-progress-dot completed" aria-hidden="true"></span><div>
               <p class="nps-progress-title">外部からの攻撃を想定したセキュリティ検証<span class="nps-history-status">検証開始</span></p>
