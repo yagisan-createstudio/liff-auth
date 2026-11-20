@@ -40,6 +40,16 @@
     .history-toggle[aria-expanded="true"] { color:#303238; }
     .progress-dot.completed { background:#56816a; }
     .history-status { display:inline-block; margin-left:7px; color:#426c55; font-size:11px; font-weight:650; }
+    .dialog { display:flex; flex-direction:column; }
+    .dialog-view[hidden] { display:none !important; }
+    .history-view { flex:1; min-height:0; display:flex; flex-direction:column; }
+    .history-header { display:flex; align-items:center; gap:10px; padding-bottom:14px; border-bottom:1px solid #d8d8d8; }
+    .history-header h1 { margin:0; padding:0; border:0; font-size:19px; }
+    .history-back { width:36px; min-height:36px; margin:0; flex-shrink:0; }
+    .history-list { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+    .history-row { padding:14px 2px; border-bottom:1px solid #e7e7e7; }
+    .history-row .progress-item { margin:0; }
+    .history-footer button { margin-top:10px; }
     .history-extra[hidden] { display:none; }
     .preview-note { padding:7px 10px; background:#f3f3f3; border-bottom:1px solid #dcdcdc; text-align:center; color:#6a6a6a; font-size:11px; }
     .closing { margin:16px 0 0; color:#484a50; font-size:14px; line-height:1.9; text-align:left; }
@@ -58,7 +68,7 @@
     <p class="error-copy">ただいまメンテナンス中です。<br>時間をおいて、再度アクセスしてください。</p>
   </main>
   <div class="scrim">
-    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="notice-title" aria-describedby="notice-copy">
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="notice-title">\n      <div class="dialog-view" id="notice-view">
       <div class="maintenance-notice-header"><span class="eyebrow">重要なお知らせ</span><time datetime="2026-11-20T07:00:00+09:00">最終更新｜2026年11月20日 7:00 JST</time></div>
       <h1 id="notice-title">セキュリティメンテナンスに伴う<br>サービス停止について</h1>
       <p id="notice-copy" class="dialog-copy">システムの安全性確認および保守作業のため、<br>以下のサービスを一時停止しております。</p>
@@ -76,29 +86,44 @@
             <p class="progress-copy">検証環境において、意図しない動作や任意コード実行につながる問題がないか確認しています。</p>
           </div>
         </div>
-        <div class="history-extra" id="progress-history" hidden>
-          <div class="progress-item">
-            <span class="progress-dot completed" aria-hidden="true"></span>
-            <div>
-              <p class="progress-title">セキュリティパッチの適用<span class="history-status">完了済み</span></p>
-              <p class="progress-copy">セキュリティパッチの適用作業が完了しました。</p>
-            </div>
-          </div>
-        </div>
-        <button type="button" class="history-toggle" id="history-toggle" aria-expanded="false" aria-controls="progress-history">すべての履歴を表示</button>
+        <button type="button" class="history-toggle" id="history-toggle" aria-controls="history-view">すべての履歴を表示 ›</button>
       </section>
       <p class="closing">作業が完了次第、サービスを再開いたします。<br>ご不便をおかけしますが、<br>再開まで今しばらくお待ちください。</p>
       <button type="button" id="dismiss">確認しました</button>
+      </div>
+      <div class="dialog-view history-view" id="history-view" hidden aria-labelledby="history-title">
+        <div class="history-header">
+          <button type="button" class="history-back" id="history-back" aria-label="お知らせに戻る">‹</button>
+          <h1 id="history-title">メンテナンス作業履歴</h1>
+        </div>
+        <div class="history-list" tabindex="0">
+          <div class="history-row"><div class="progress-item">
+            <span class="progress-dot" aria-hidden="true"></span>
+            <div><p class="progress-title">外部からの攻撃を想定したセキュリティ検証</p><p class="progress-copy">検証環境において、意図しない動作や任意コード実行につながる問題がないか確認しています。</p><span class="progress-state">検証中</span></div>
+          </div></div>
+          <div class="history-row"><div class="progress-item">
+            <span class="progress-dot completed" aria-hidden="true"></span>
+            <div><p class="progress-title">セキュリティパッチの適用<span class="history-status">完了済み</span></p><p class="progress-copy">セキュリティパッチの適用作業が完了しました。</p></div>
+          </div></div>
+        </div>
+        <div class="history-footer"><button type="button" id="history-return">お知らせに戻る</button></div>
+      </div>
     </section>
   </div>
   <script>
-    document.getElementById('history-toggle').addEventListener('click', function () {
-      const history = document.getElementById('progress-history');
-      const expanded = this.getAttribute('aria-expanded') === 'true';
-      history.hidden = expanded;
-      this.setAttribute('aria-expanded', String(!expanded));
-      this.textContent = expanded ? 'すべての履歴を表示' : '履歴を閉じる';
-    });
+    const dialog = document.querySelector('.dialog');
+    const noticeView = document.getElementById('notice-view');
+    const historyView = document.getElementById('history-view');
+    function switchView(showHistory) {
+      if (showHistory) dialog.style.height = Math.min(dialog.getBoundingClientRect().height, window.innerHeight - 28) + 'px';
+      noticeView.hidden = showHistory;
+      historyView.hidden = !showHistory;
+      dialog.scrollTop = 0;
+      if (!showHistory) dialog.style.height = '';
+    }
+    document.getElementById('history-toggle').addEventListener('click', function () { switchView(true); });
+    document.getElementById('history-back').addEventListener('click', function () { switchView(false); });
+    document.getElementById('history-return').addEventListener('click', function () { switchView(false); });
     document.getElementById('dismiss').addEventListener('click', function () {
       document.body.classList.add('dismissed');
     });
