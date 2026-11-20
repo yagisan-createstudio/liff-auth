@@ -21,10 +21,9 @@
       // One-time return from a LINE login initiated after the corner shortcut.
       // Consume the marker immediately: no persistent maintenance bypass.
       try {
-        var handoff = sessionStorage.getItem('nps-maintenance-login-handoff-v1');
+        var handoffStarted = Number(sessionStorage.getItem('nps-maintenance-login-handoff-v1') || 0);
         sessionStorage.removeItem('nps-maintenance-login-handoff-v1');
-        var loginStarted = Number(sessionStorage.getItem('nps-production-entry-login-v1') || 0);
-        if (handoff === '1' && loginStarted > 0 && now - loginStarted >= 0 && now - loginStarted < 120000) active = false;
+        if (handoffStarted > 0 && now >= handoffStarted && now - handoffStarted < 120000) active = false;
       } catch (_) {}
       document.documentElement.classList.toggle('nps-maintenance-active', active);
       document.title = active ? 'メンテナンスのお知らせ' : 'NPS Viewer';
@@ -1009,11 +1008,6 @@
           if (target) returnUrl.searchParams.set('target',target);
           if (hasArchiveDate_) returnUrl.searchParams.set('date',archiveDateSafe_);
           sessionStorage.setItem(loginKey,String(Date.now()));
-          // Only the authenticated LINE redirect may carry a one-time UI handoff.
-          // The maintenance notice is still shown on fresh direct visits.
-          if (window.npsMaintenanceCornerUnlocked_ === true) {
-            sessionStorage.setItem('nps-maintenance-login-handoff-v1','1');
-          }
           npsProductionSetStage_('LINEログインへ移動中');
           liff.login({redirectUri:returnUrl.href});
           return;
@@ -1120,7 +1114,9 @@
           position++;
           if (position === sequence.length) {
             unlocked = true;
-            window.npsMaintenanceCornerUnlocked_ = true;
+            // LIFF initialization itself can navigate before liff.login() runs.
+            // Allow only the next same-tab page load to pass the maintenance UI.
+            try { sessionStorage.setItem('nps-maintenance-login-handoff-v1', String(Date.now())); } catch (_) {}
             // Hide and detach the entire 503 notice before revealing the viewer.
             // This prevents a stale maintenance dialog from flashing during startup.
             var maintenanceScreen = document.getElementById('nps-maintenance-screen');
