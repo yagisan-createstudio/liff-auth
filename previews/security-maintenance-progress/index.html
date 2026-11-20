@@ -45,7 +45,6 @@
     .history-view { flex:1; min-height:0; display:flex; flex-direction:column; }
     .history-header { display:flex; align-items:center; gap:10px; padding-bottom:14px; border-bottom:1px solid #d8d8d8; }
     .history-header h1 { margin:0; padding:0; border:0; font-size:19px; }
-    .history-back { width:36px; min-height:36px; margin:0; flex-shrink:0; }
     .history-list { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
     .history-row { padding:14px 2px; border-bottom:1px solid #e7e7e7; }
     .history-row .progress-item { margin:0; }
@@ -68,7 +67,8 @@
     <p class="error-copy">ただいまメンテナンス中です。<br>時間をおいて、再度アクセスしてください。</p>
   </main>
   <div class="scrim">
-    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="notice-title">\n      <div class="dialog-view" id="notice-view">
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="notice-title">
+      <div class="dialog-view" id="notice-view">
       <div class="maintenance-notice-header"><span class="eyebrow">重要なお知らせ</span><time datetime="2026-11-20T07:00:00+09:00">最終更新｜2026年11月20日 7:00 JST</time></div>
       <h1 id="notice-title">セキュリティメンテナンスに伴う<br>サービス停止について</h1>
       <p id="notice-copy" class="dialog-copy">システムの安全性確認および保守作業のため、<br>以下のサービスを一時停止しております。</p>
@@ -93,7 +93,6 @@
       </div>
       <div class="dialog-view history-view" id="history-view" hidden aria-labelledby="history-title">
         <div class="history-header">
-          <button type="button" class="history-back" id="history-back" aria-label="お知らせに戻る">‹</button>
           <h1 id="history-title">メンテナンス作業履歴</h1>
         </div>
         <div class="history-list" tabindex="0">
@@ -122,7 +121,6 @@
       if (!showHistory) dialog.style.height = '';
     }
     document.getElementById('history-toggle').addEventListener('click', function () { switchView(true); });
-    document.getElementById('history-back').addEventListener('click', function () { switchView(false); });
     document.getElementById('history-return').addEventListener('click', function () { switchView(false); });
     document.getElementById('dismiss').addEventListener('click', function () {
       document.body.classList.add('dismissed');
