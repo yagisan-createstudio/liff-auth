@@ -18,6 +18,14 @@
       var start = Date.parse('2026-11-20T00:00:00+09:00');
       var now = Date.now();
       var active = now >= start;
+      // One-time return from a LINE login initiated after the corner shortcut.
+      // Consume the marker immediately: no persistent maintenance bypass.
+      try {
+        var handoff = sessionStorage.getItem('nps-maintenance-login-handoff-v1');
+        sessionStorage.removeItem('nps-maintenance-login-handoff-v1');
+        var loginStarted = Number(sessionStorage.getItem('nps-production-entry-login-v1') || 0);
+        if (handoff === '1' && loginStarted > 0 && now - loginStarted >= 0 && now - loginStarted < 120000) active = false;
+      } catch (_) {}
       document.documentElement.classList.toggle('nps-maintenance-active', active);
       document.title = active ? 'メンテナンスのお知らせ' : 'NPS Viewer';
       if (!active) {
@@ -875,8 +883,10 @@
     }
     const NPS_LEGACY_REPORT_DATES_ = ['20261113', '20261114', '20261115', '20261116', '20261117'];
 
+    let npsMainStarted_ = false;
     async function main() {
-      if (document.documentElement.classList.contains('nps-maintenance-active')) return;
+      if (document.documentElement.classList.contains('nps-maintenance-active') || npsMainStarted_) return;
+      npsMainStarted_ = true;
       const preview = new URLSearchParams(window.location.search).get('errorPreview');
       if (preview === 'STORE-01') {
         npsShowProductionError_(preview);
@@ -997,6 +1007,11 @@
           if (target) returnUrl.searchParams.set('target',target);
           if (hasArchiveDate_) returnUrl.searchParams.set('date',archiveDateSafe_);
           sessionStorage.setItem(loginKey,String(Date.now()));
+          // Only the authenticated LINE redirect may carry a one-time UI handoff.
+          // The maintenance notice is still shown on fresh direct visits.
+          if (window.npsMaintenanceCornerUnlocked_ === true) {
+            sessionStorage.setItem('nps-maintenance-login-handoff-v1','1');
+          }
           npsProductionSetStage_('LINEログインへ移動中');
           liff.login({redirectUri:returnUrl.href});
           return;
@@ -1103,6 +1118,7 @@
           position++;
           if (position === sequence.length) {
             unlocked = true;
+            window.npsMaintenanceCornerUnlocked_ = true;
             // Hide and detach the entire 503 notice before revealing the viewer.
             // This prevents a stale maintenance dialog from flashing during startup.
             var maintenanceScreen = document.getElementById('nps-maintenance-screen');
