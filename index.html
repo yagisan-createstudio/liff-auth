@@ -353,6 +353,7 @@
     .nps-dialog-view[hidden] { display:none !important; }
     .nps-progress-dot.failed { background:#a94747; }
     .nps-history-status.failed { color:#a13d3d; }
+    .nps-history-time { display:block; margin-bottom:7px; color:#777b83; font-size:11px; font-weight:600; font-variant-numeric:tabular-nums; }
   </style>
 </head>
 <body>
@@ -386,7 +387,7 @@
     <div class="nps-maintenance-scrim">
       <section class="nps-maintenance-dialog" role="dialog" aria-modal="true" aria-labelledby="nps-maintenance-heading">
       <div class="nps-dialog-view" id="nps-notice-view">
-      <div class="maintenance-notice-header"><span class="nps-maintenance-eyebrow">重要なお知らせ</span><time datetime="2026-11-20T07:00:00+09:00">最終更新｜2026年11月20日 7:00 JST</time></div>
+      <div class="maintenance-notice-header"><span class="nps-maintenance-eyebrow">重要なお知らせ</span><time datetime="2026-11-20T11:00:00+09:00">最終更新｜2026年11月20日 11:00 JST</time></div>
       <h1 id="nps-maintenance-heading">セキュリティメンテナンスに伴う<br>サービス停止について</h1>
       <p id="notice-copy" class="dialog-copy">システムの安全性確認および保守作業のため、<br>以下のサービスを一時停止しております。</p>
       <dl class="nps-maintenance-details">
@@ -413,7 +414,7 @@
           <h1 id="nps-history-title">メンテナンス作業履歴</h1>
         </div>
         <div class="nps-history-list" tabindex="0">
-          <div class="nps-history-row"><div class="nps-progress-item">
+          <div class="nps-history-row"><time class="nps-history-time" datetime="2026-11-20T11:00:00+09:00">11月20日 11:00 JST</time><div class="nps-progress-item"><div class="nps-history-row"><time class="nps-history-time" datetime="2026-11-20T7:00:00+09:00">11月20日 7:00 JST</time><div class="nps-progress-item"><div class="nps-history-row"><time class="nps-history-time" datetime="2026-11-20T5:00:00+09:00">11月20日 5:00 JST</time><div class="nps-progress-item"><div class="nps-history-row"><div class="nps-progress-item">
             <span class="nps-progress-dot" aria-hidden="true"></span>
             <div><p class="nps-progress-title">セキュリティパッチの最適化</p><p class="nps-progress-copy">検証結果を踏まえ、セキュリティパッチの見直しと最適化を進めています。</p><span class="nps-progress-state">作業中</span></div>
           </div></div>
