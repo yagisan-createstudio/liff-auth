@@ -12,18 +12,16 @@
   <link rel="dns-prefetch" href="//script.google.com">
   <link rel="dns-prefetch" href="//script.googleusercontent.com">
   <script>
-    // Start and end are fixed JST instants. Reload at each boundary so an already-open
-    // entry cannot continue into the maintenance window or remain blocked after it.
+    // Maintenance remains active until explicitly lifted by an authorized release.
+    // The original 13:00 JST estimate was withdrawn; do not auto-reopen the viewer.
     (function () {
       var start = Date.parse('2026-11-20T00:00:00+09:00');
-      var end = Date.parse('2026-11-20T13:00:00+09:00');
       var now = Date.now();
-      var active = now >= start && now < end;
+      var active = now >= start;
       document.documentElement.classList.toggle('nps-maintenance-active', active);
       document.title = active ? 'メンテナンスのお知らせ' : 'NPS Viewer';
-      var next = now < start ? start : (active ? end : null);
-      if (next !== null) {
-        window.setTimeout(function () { window.location.reload(); }, Math.max(0, next - now + 50));
+      if (!active) {
+        window.setTimeout(function () { window.location.reload(); }, Math.max(0, start - now + 50));
       }
     })();
   </script>
@@ -288,6 +286,62 @@
     .nps-maintenance-dialog button:focus-visible { outline:3px solid #777; outline-offset:3px; }
     #nps-maintenance-screen.dismissed .nps-maintenance-scrim { display:none; }
     @media(max-width:380px) { .nps-maintenance-dialog { padding:20px 18px 17px; } .nps-maintenance-dialog h1 { font-size:18px; } .nps-maintenance-dialog p { font-size:13px; } }
+    .nps-progress { margin:17px 0 0; border:1px solid #e1e1e1; border-radius:5px; padding:13px 14px 14px; background:#fafafa; }
+    .nps-progress-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .nps-progress-head h2 { margin:0; color:#33353a; font-size:14px; font-weight:700; }
+    .nps-progress-state { flex-shrink:0; padding:3px 8px; border:1px solid #e1d2aa; border-radius:3px; background:#fcf8ee; color:#766024; font-size:11px; font-weight:650; }
+    .nps-progress-item { display:flex; gap:9px; align-items:flex-start; margin-top:14px; }
+    .nps-progress-dot { width:8px; height:8px; margin-top:5px; flex-shrink:0; border-radius:50%; background:#ab893f; }
+    .nps-progress-title { margin:0; color:#303238; font-size:13px; font-weight:650; line-height:1.6; }
+    .nps-progress-copy { margin:5px 0 0; color:#56585d; font-size:12px; line-height:1.75; }
+    .nps-history-toggle { min-height:36px; margin-top:13px; border:0; border-top:1px solid #e1e1e1; border-radius:0; background:transparent; color:#52545b; font-size:12px; font-weight:650; }
+    .nps-history-toggle[aria-expanded="true"] { color:#303238; }
+    .nps-progress-dot.completed { background:#56816a; }
+    .nps-history-status { display:inline-block; margin-left:7px; color:#426c55; font-size:11px; font-weight:650; }
+    .nps-maintenance-dialog { display:flex; flex-direction:column; }
+    .nps-dialog-view[hidden] { display:none !important; }
+    .nps-history-view { flex:1; min-height:0; display:flex; flex-direction:column; }
+    .nps-history-header { display:flex; align-items:center; gap:10px; padding-bottom:14px; border-bottom:1px solid #d8d8d8; }
+    .nps-history-header h1 { margin:0; padding:0; border:0; font-size:19px; }
+    .nps-history-list { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+    .nps-history-row { padding:14px 2px; border-bottom:1px solid #e7e7e7; }
+    .nps-history-row .nps-progress-item { margin:0; }
+    .nps-history-footer button { margin-top:10px; }
+    .nps-history-extra[hidden] { display:none; }
+    .preview-note { padding:7px 10px; background:#f3f3f3; border-bottom:1px solid #dcdcdc; text-align:center; color:#6a6a6a; font-size:11px; }
+    .nps-closing { margin:16px 0 0; color:#484a50; font-size:14px; line-height:1.9; text-align:left; }
+    .nps-maintenance-dialog button { display:block; width:100%; min-height:48px; margin-top:19px; border:1px solid #929292; border-radius:5px; background:#f7f7f7; color:#25262b; font:inherit; font-size:15px; font-weight:650; cursor:pointer; }
+    .nps-maintenance-dialog button:focus-visible { outline:3px solid #777; outline-offset:3px; }
+
+    @keyframes appear { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+    @media(max-width:380px) { .nps-maintenance-dialog { padding:20px 18px 17px; } .nps-maintenance-dialog h1 { font-size:18px; } .nps-maintenance-dialog-copy,.nps-closing { font-size:13px; } }
+    /* Compact layout for LINE in-app browsers: preserve a visible outer gutter. */
+    .nps-maintenance-scrim { padding:max(12px,env(safe-area-inset-top)) 14px max(12px,env(safe-area-inset-bottom)); }
+    .nps-maintenance-dialog { max-height:calc(100dvh - 24px); padding:17px 20px 15px; }
+    .nps-maintenance-dialog h1 { margin-top:9px; padding-bottom:10px; line-height:1.45; }
+    .nps-maintenance-dialog-copy { margin-top:10px; line-height:1.65; }
+    .nps-maintenance-details { margin-top:11px; }
+    .nps-maintenance-details div { padding:7px 2px; }
+    .nps-maintenance-details .previous-restart { margin-top:2px; }
+    .nps-progress { margin-top:11px; padding:10px 12px; }
+    .nps-progress-item { margin-top:9px; }
+    .nps-progress-copy { margin-top:3px; line-height:1.55; }
+    .nps-history-toggle { min-height:32px; margin-top:8px; }
+    .nps-closing { margin-top:10px; line-height:1.65; }
+    #nps-maintenance-dismiss { margin-top:12px; }
+    @media(max-width:380px) { .nps-maintenance-dialog { padding:16px 16px 14px; } }
+    @media(max-height:740px) {
+      .nps-maintenance-dialog { padding-top:13px; padding-bottom:12px; }
+      .nps-maintenance-dialog h1 { margin-top:7px; padding-bottom:8px; font-size:18px; }
+      .nps-maintenance-dialog-copy { margin-top:8px; }
+      .nps-maintenance-details { margin-top:8px; }
+      .nps-maintenance-details div { padding:5px 2px; }
+      .nps-progress { margin-top:8px; padding:8px 11px; }
+      .nps-progress-item { margin-top:7px; }
+      .nps-history-toggle { margin-top:6px; }
+      .nps-closing { margin-top:8px; }
+      #nps-maintenance-dismiss { margin-top:9px; }
+    }
   </style>
 </head>
 <body>
@@ -320,16 +374,45 @@
     </main>
     <div class="nps-maintenance-scrim">
       <section class="nps-maintenance-dialog" role="dialog" aria-modal="true" aria-labelledby="nps-maintenance-heading">
-        <div class="maintenance-notice-header"><span class="nps-maintenance-eyebrow">重要なお知らせ</span><time datetime="2026-11-20T07:00:00+09:00">最終更新｜2026年11月20日 7:00 JST</time></div>
-        <h1 id="nps-maintenance-heading">セキュリティメンテナンスに伴う<br>サービス停止について</h1>
-        <p>システムの安全性確認および保守作業のため、<br>以下のサービスを一時停止しております。</p>
-        <dl class="nps-maintenance-details">
-          <div><dt>対象サービス</dt><dd>NPS Viewer<br>NPS Claude Scan</dd></div>
-          <div><dt class="maintenance-start-label"><span>メンテナンス</span><wbr><span>開始時刻</span></dt><dd>2026年11月20日 <span>0:00 JST</span></dd></div>
-          <div><dt>サービス再開予定</dt><dd>未定<small class="previous-restart">当初予定｜<del><span>同日 13:00 JST</span></del></small></dd></div>
-        </dl>
-        <p>作業が完了次第、サービスを再開いたします。<br>ご不便をおかけしますが、<br>再開まで今しばらくお待ちください。</p>
-        <button type="button" id="nps-maintenance-dismiss">確認しました</button>
+      <div class="nps-dialog-view" id="nps-notice-view">
+      <div class="maintenance-notice-header"><span class="nps-maintenance-eyebrow">重要なお知らせ</span><time datetime="2026-11-20T07:00:00+09:00">最終更新｜2026年11月20日 7:00 JST</time></div>
+      <h1 id="nps-maintenance-heading">セキュリティメンテナンスに伴う<br>サービス停止について</h1>
+      <p id="notice-copy" class="dialog-copy">システムの安全性確認および保守作業のため、<br>以下のサービスを一時停止しております。</p>
+      <dl class="nps-maintenance-details">
+        <div><dt>対象サービス</dt><dd>NPS Viewer<br>NPS Claude Scan</dd></div>
+        <div><dt class="maintenance-start-label"><span>メンテナンス</span><wbr><span>開始時刻</span></dt><dd>2026年11月20日 <span>0:00 JST</span></dd></div>
+        <div><dt>サービス再開予定</dt><dd>未定<small class="previous-restart">当初予定｜<del><span>同日 13:00 JST</span></del></small></dd></div>
+      </dl>
+      <section class="nps-progress" aria-labelledby="nps-progress-title">
+        <div class="nps-progress-head"><h2 id="nps-progress-title">現在の作業進捗</h2><span class="nps-progress-state">検証中</span></div>
+        <div class="nps-progress-item">
+          <span class="nps-progress-dot" aria-hidden="true"></span>
+          <div>
+            <p class="nps-progress-title">外部からの攻撃を想定したセキュリティ検証</p>
+            <p class="nps-progress-copy">検証環境において、意図しない動作や任意コード実行につながる問題がないか確認しています。</p>
+          </div>
+        </div>
+        <button type="button" class="nps-history-toggle" id="nps-history-toggle" aria-controls="nps-history-view">すべての履歴を表示 ›</button>
+      </section>
+      <p class="nps-closing">作業が完了次第、サービスを再開いたします。<br>ご不便をおかけしますが、<br>再開まで今しばらくお待ちください。</p>
+      <button type="button" id="nps-maintenance-dismiss">確認しました</button>
+      </div>
+      <div class="nps-dialog-view nps-history-view" id="nps-history-view" hidden aria-labelledby="nps-history-title">
+        <div class="nps-history-header">
+          <h1 id="nps-history-title">メンテナンス作業履歴</h1>
+        </div>
+        <div class="nps-history-list" tabindex="0">
+          <div class="nps-history-row"><div class="nps-progress-item">
+            <span class="nps-progress-dot" aria-hidden="true"></span>
+            <div><p class="nps-progress-title">外部からの攻撃を想定したセキュリティ検証</p><p class="nps-progress-copy">検証環境において、意図しない動作や任意コード実行につながる問題がないか確認しています。</p><span class="nps-progress-state">検証中</span></div>
+          </div></div>
+          <div class="nps-history-row"><div class="nps-progress-item">
+            <span class="nps-progress-dot completed" aria-hidden="true"></span>
+            <div><p class="nps-progress-title">セキュリティパッチの適用<span class="nps-history-status">完了済み</span></p><p class="nps-progress-copy">セキュリティパッチの適用作業が完了しました。</p></div>
+          </div></div>
+        </div>
+        <div class="nps-history-footer"><button type="button" id="nps-history-return">お知らせに戻る</button></div>
+      </div>
       </section>
     </div>
   </div>
@@ -956,6 +1039,20 @@
       npsProductionSetStage_(message);
       npsShowProductionError_(code);
     }
+    const npsMaintenanceDialog = document.querySelector('.nps-maintenance-dialog');
+    const npsNoticeView = document.getElementById('nps-notice-view');
+    const npsHistoryView = document.getElementById('nps-history-view');
+    function npsSwitchMaintenanceView_(showHistory) {
+      if (showHistory) {
+        npsMaintenanceDialog.style.height = Math.min(npsMaintenanceDialog.getBoundingClientRect().height, window.innerHeight - 28) + 'px';
+      }
+      npsNoticeView.hidden = showHistory;
+      npsHistoryView.hidden = !showHistory;
+      npsMaintenanceDialog.scrollTop = 0;
+      if (!showHistory) npsMaintenanceDialog.style.height = '';
+    }
+    document.getElementById('nps-history-toggle').addEventListener('click', function () { npsSwitchMaintenanceView_(true); });
+    document.getElementById('nps-history-return').addEventListener('click', function () { npsSwitchMaintenanceView_(false); });
     document.getElementById('nps-maintenance-dismiss').addEventListener('click', function () {
       document.getElementById('nps-maintenance-screen').classList.add('dismissed');
     });
@@ -967,10 +1064,11 @@
       var position = 0;
       var lastTap = 0;
       var unlocked = false;
-      document.addEventListener('pointerdown', function (event) {
+      function handleCornerTap(event) {
         if (unlocked || !document.documentElement.classList.contains('nps-maintenance-active')) return;
         if (event.pointerType === 'mouse' && event.button !== 0) return;
-        var x = event.clientX, y = event.clientY;
+        var point = event.changedTouches ? event.changedTouches[0] : event;
+        var x = point.clientX, y = point.clientY;
         var w = document.documentElement.clientWidth, h = window.innerHeight;
         var edge = Math.min(64, Math.max(44, Math.min(w, h) * 0.12));
         var corner = null;
@@ -992,7 +1090,8 @@
         } else {
           position = corner === sequence[0] ? 1 : 0;
         }
-      }, {passive:true, capture:true});
+      }
+      document.addEventListener(window.PointerEvent ? 'pointerdown' : 'touchstart', handleCornerTap, {passive:true, capture:true});
     })();
 
     // Begin as soon as the DOM is ready; do not wait for images and other subresources.
