@@ -351,6 +351,43 @@
       .nps-closing { margin-top:8px; }
       #nps-maintenance-dismiss { margin-top:9px; }
     }
+    /* Responsive maintenance facts: readable spacing even on compact screens. */
+    .nps-maintenance-details {
+      display:block;
+      margin-top:clamp(11px, 1.7vh, 17px);
+    }
+    .nps-maintenance-details > div {
+      display:grid;
+      grid-template-columns:minmax(0, 39%) minmax(0, 1fr);
+      column-gap:clamp(10px, 2.5vw, 16px);
+      align-items:start;
+      padding:clamp(11px, 1.65vh, 15px) 2px;
+    }
+    .nps-maintenance-details dt {
+      font-size:clamp(12px, 3.2vw, 13px);
+      line-height:1.55;
+      overflow-wrap:anywhere;
+    }
+    .nps-maintenance-details dd {
+      min-width:0;
+      font-size:clamp(13px, 3.5vw, 14px);
+      line-height:1.55;
+      overflow-wrap:anywhere;
+    }
+    .nps-maintenance-details .previous-restart {
+      margin-top:4px;
+      line-height:1.5;
+    }
+    @media (max-width:340px) {
+      .nps-maintenance-details > div {
+        grid-template-columns:minmax(0, 38%) minmax(0, 1fr);
+        column-gap:8px;
+      }
+      .nps-maintenance-details dd span { white-space:normal; }
+    }
+    @media (max-height:740px) {
+      .nps-maintenance-details > div { padding:10px 2px; }
+    }
     /* Keep progress typography compact despite the original dialog paragraph rule. */
     .nps-maintenance-dialog .nps-progress-title { margin:0; font-size:13px; line-height:1.6; font-weight:650; }
     .nps-maintenance-dialog .nps-progress-copy { margin:3px 0 0; font-size:12px; line-height:1.55; }
