@@ -354,6 +354,8 @@
     .nps-progress-dot.failed { background:#a94747; }
     .nps-history-status.failed { color:#a13d3d; }
     .nps-history-time { display:block; margin-bottom:7px; color:#777b83; font-size:11px; font-weight:600; font-variant-numeric:tabular-nums; }
+    .nps-progress:has(> .nps-history-toggle) { margin-top:15px; }
+    .nps-progress > .nps-history-toggle { margin-top:0; border-top:0; }
   </style>
 </head>
 <body>
@@ -395,16 +397,8 @@
         <div><dt class="maintenance-start-label"><span>メンテナンス</span><wbr><span>開始時刻</span></dt><dd>2026年11月20日 <span>0:00 JST</span></dd></div>
         <div><dt>サービス再開予定</dt><dd>未定<small class="previous-restart">当初予定｜<del><span>同日 13:00 JST</span></del></small></dd></div>
       </dl>
-      <section class="nps-progress" aria-labelledby="nps-progress-title">
-        <div class="nps-progress-head"><h2 id="nps-progress-title">現在の作業進捗</h2><span class="nps-progress-state">作業中</span></div>
-        <div class="nps-progress-item">
-          <span class="nps-progress-dot" aria-hidden="true"></span>
-          <div>
-            <p class="nps-progress-title">セキュリティパッチの最適化</p>
-            <p class="nps-progress-copy">検証結果を踏まえ、セキュリティパッチの見直しと最適化を進めています。</p>
-          </div>
-        </div>
-        <button type="button" class="nps-history-toggle" id="nps-history-toggle" aria-controls="nps-history-view">すべての履歴を表示 ›</button>
+      <section class="nps-progress" aria-label="作業進捗">
+        <button type="button" class="nps-history-toggle" id="nps-history-toggle" aria-controls="nps-history-view">作業進捗を表示 ›</button>
       </section>
       <p class="nps-closing">作業が完了次第、サービスを再開いたします。<br>ご不便をおかけしますが、<br>再開まで今しばらくお待ちください。</p>
       <button type="button" id="nps-maintenance-dismiss">確認しました</button>
