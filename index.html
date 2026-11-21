@@ -290,6 +290,10 @@
     .maintenance-start-label span { display:inline-block; white-space:nowrap; }
     .nps-maintenance-details dd { margin:0; color:#292a2f; font-size:14px; font-weight:650; }
     .nps-maintenance-details .previous-restart { display:block; margin-top:4px; color:#626369; font-size:12px; font-weight:400; }
+    .nps-maintenance-details .nps-restart-service { display:block; font-size:12px; font-weight:600; color:#555b65; }
+    .nps-maintenance-details .nps-restart-date { display:block; font-size:13px; font-weight:650; white-space:normal; }
+    .nps-maintenance-details .nps-restart-next { margin-top:8px; }
+
     .nps-maintenance-details dd span { white-space:nowrap; }
     .nps-maintenance-dialog button { display:block; width:100%; min-height:48px; margin-top:19px; border:1px solid #929292; border-radius:5px; background:#f7f7f7; color:#25262b; font:inherit; font-size:15px; font-weight:650; cursor:pointer; }
     .nps-maintenance-dialog button:focus-visible { outline:3px solid #777; outline-offset:3px; }
@@ -435,13 +439,13 @@
     <div class="nps-maintenance-scrim">
       <section class="nps-maintenance-dialog" role="dialog" aria-modal="true" aria-labelledby="nps-maintenance-heading">
       <div class="nps-dialog-view" id="nps-notice-view">
-      <div class="maintenance-notice-header"><span class="nps-maintenance-eyebrow">重要なお知らせ</span><time datetime="2026-11-20T19:05:00+09:00">最終更新｜2026年11月20日 19:05 JST</time></div>
+      <div class="maintenance-notice-header"><span class="nps-maintenance-eyebrow">重要なお知らせ</span><time datetime="2026-11-21T20:15:00+09:00">最終更新｜2026年11月21日 20:15 JST</time></div>
       <h1 id="nps-maintenance-heading">セキュリティメンテナンスに伴う<br>サービス停止について</h1>
       <p id="notice-copy" class="dialog-copy">システムの安全性確認および保守作業のため、<br>以下のサービスを一時停止しております。</p>
       <dl class="nps-maintenance-details">
         <div><dt>対象サービス</dt><dd>NPS Viewer<br>NPS Claude Scan</dd></div>
         <div><dt class="maintenance-start-label"><span>メンテナンス</span><wbr><span>開始時刻</span></dt><dd>2026年11月20日 <span>0:00 JST</span></dd></div>
-        <div><dt>サービス再開予定</dt><dd>未定<small class="previous-restart">当初予定｜<del><span>同日 13:00 JST</span></del></small></dd></div>
+        <div><dt>サービス再開予定</dt><dd><span class="nps-restart-service">NPS Viewer</span><span class="nps-restart-date">11月22日 21:00 JST</span><span class="nps-restart-service nps-restart-next">NPS Claude Scan</span><span class="nps-restart-date">11月23日 21:00 JST</span><small class="previous-restart">当初予定｜<del><span>11月20日 13:00 JST</span></del></small></dd></div>
       </dl>
       <section class="nps-progress" aria-label="作業進捗">
         <button type="button" class="nps-history-toggle" id="nps-history-toggle" aria-controls="nps-history-view">作業進捗を表示 ›</button>
