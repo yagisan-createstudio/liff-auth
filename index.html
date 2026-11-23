@@ -268,7 +268,7 @@
     #nps-maintenance-screen { display:none; position:fixed; inset:0; z-index:99999; color:#303238; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
     html.nps-maintenance-active #nps-maintenance-screen { display:block; }
     /* Recovery notice overlays the working viewer without the 503 shutdown screen. */
-    #nps-maintenance-screen:not(.dismissed) { display:block; pointer-events:none; }
+    #nps-maintenance-screen:not(.dismissed) { display:none; pointer-events:none; }
     #nps-maintenance-screen .nps-maintenance-bg { display:none; }
     #nps-maintenance-screen .nps-maintenance-scrim { pointer-events:auto; }
     #nps-maintenance-screen.dismissed { display:none; }
