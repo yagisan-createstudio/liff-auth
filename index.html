@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title id="page-title">メンテナンスのお知らせ</title>
+  <title id="page-title">NPS Viewer｜復旧のお知らせ</title>
   <meta name="description" content="NPSレポートを閲覧できます。">
   <meta property="og:title" content="NPS Viewer">
   <meta property="og:description" content="NPSレポートを閲覧できます。">
@@ -25,11 +25,11 @@
         sessionStorage.removeItem('nps-maintenance-login-handoff-v1');
         if (handoffStarted > 0 && now >= handoffStarted && now - handoffStarted < 120000) active = false;
       } catch (_) {}
-      document.documentElement.classList.toggle('nps-maintenance-active', active);
-      document.title = active ? 'メンテナンスのお知らせ' : 'NPS Viewer';
+      document.documentElement.classList.remove('nps-maintenance-active');
+      document.title = 'NPS Viewer｜復旧のお知らせ';
       // Schedule the maintenance start only while it is still in the future.
       // A LINE-auth handoff after the start must NOT trigger an immediate reload.
-      if (now < start) {
+      if (false && now < start) {
         window.setTimeout(function () { window.location.reload(); }, Math.max(0, start - now + 50));
       }
     })();
@@ -267,6 +267,11 @@
     html.nps-maintenance-active body > :not(#nps-maintenance-screen) { display:none !important; }
     #nps-maintenance-screen { display:none; position:fixed; inset:0; z-index:99999; color:#303238; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
     html.nps-maintenance-active #nps-maintenance-screen { display:block; }
+    /* Recovery notice overlays the working viewer without the 503 shutdown screen. */
+    #nps-maintenance-screen:not(.dismissed) { display:block; pointer-events:none; }
+    #nps-maintenance-screen .nps-maintenance-bg { display:none; }
+    #nps-maintenance-screen .nps-maintenance-scrim { pointer-events:auto; }
+    #nps-maintenance-screen.dismissed { display:none; }
     .nps-maintenance-bg { position:absolute; inset:0; overflow:auto; background:#fff; color:#333; }
     .nps-maintenance-content { width:calc(100% - 48px); max-width:600px; margin:15vh auto 0; padding-bottom:40px; text-align:center; }
     .nps-maintenance-code { font-family:Arial,sans-serif; font-size:100px; font-weight:700; line-height:1.1; }
@@ -439,18 +444,18 @@
     <div class="nps-maintenance-scrim">
       <section class="nps-maintenance-dialog" role="dialog" aria-modal="true" aria-labelledby="nps-maintenance-heading">
       <div class="nps-dialog-view" id="nps-notice-view">
-      <div class="maintenance-notice-header"><span class="nps-maintenance-eyebrow">重要なお知らせ</span><time datetime="2026-11-22T20:30:00+09:00">最終更新｜2026年11月22日 20:30 JST</time></div>
-      <h1 id="nps-maintenance-heading">セキュリティメンテナンスに伴う<br>サービス停止について</h1>
-      <p id="notice-copy" class="dialog-copy">システムの安全性確認および保守作業のため、<br>以下のサービスを一時停止しております。</p>
+      <div class="maintenance-notice-header"><span class="nps-maintenance-eyebrow">重要なお知らせ</span><time datetime="2026-11-23T15:52:00+09:00">最終更新｜2026年11月23日 15:52 JST</time></div>
+      <h1 id="nps-maintenance-heading">NPS Viewerの<br>サービス復旧について</h1>
+      <p id="notice-copy" class="dialog-copy">NPS Viewerのご利用を再開しました。<br>現在、主要機能をご利用いただけます。</p>
       <dl class="nps-maintenance-details">
-        <div><dt>対象サービス</dt><dd>NPS Viewer<br>NPS Claude Scan</dd></div>
-        <div><dt class="maintenance-start-label"><span>メンテナンス</span><wbr><span>開始時刻</span></dt><dd>2026年11月20日 <span>0:00 JST</span></dd></div>
-        <div><dt>サービス再開予定</dt><dd><span class="nps-restart-service">NPS Viewer</span><span class="nps-restart-date">11月23日 0:00 JST</span><span class="nps-restart-service nps-restart-next">NPS Claude Scan</span><span class="nps-restart-date">11月23日 21:00 JST</span></dd></div>
+        <div><dt>復旧したサービス</dt><dd>NPS Viewer</dd></div>
+        <div><dt class="maintenance-start-label"><span>サービス</span><wbr><span>利用状況</span></dt><dd>ご利用いただけます</dd></div>
+        <div><dt>現在の対応状況</dt><dd>一部画面の表示・操作を引き続き調整中</dd></div>
       </dl>
       <section class="nps-progress" aria-label="作業進捗">
-        <button type="button" class="nps-history-toggle" id="nps-history-toggle" aria-controls="nps-history-view">作業進捗を表示 ›</button>
+        <button type="button" class="nps-history-toggle" id="nps-history-toggle" aria-controls="nps-history-view">対応履歴を表示 ›</button>
       </section>
-      <p class="nps-closing">作業が完了次第、サービスを再開いたします。<br>ご不便をおかけしますが、<br>再開まで今しばらくお待ちください。</p>
+      <p class="nps-closing">一部の表示や操作は引き続き調整しております。<br>ご不便をおかけしましたことを<br>お詫び申し上げます。</p>
       <button type="button" id="nps-maintenance-dismiss">確認しました</button>
       </div>
       <div class="nps-dialog-view nps-history-view" id="nps-history-view" hidden aria-labelledby="nps-history-title">
