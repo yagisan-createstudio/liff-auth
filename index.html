@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title id="page-title">NPS Viewer｜復旧のお知らせ</title>
+  <title id="page-title">NPS Viewer</title>
   <meta name="description" content="NPSレポートを閲覧できます。">
   <meta property="og:title" content="NPS Viewer">
   <meta property="og:description" content="NPSレポートを閲覧できます。">
@@ -26,7 +26,7 @@
         if (handoffStarted > 0 && now >= handoffStarted && now - handoffStarted < 120000) active = false;
       } catch (_) {}
       document.documentElement.classList.remove('nps-maintenance-active');
-      document.title = 'NPS Viewer｜復旧のお知らせ';
+      document.title = 'NPS Viewer';
       // Schedule the maintenance start only while it is still in the future.
       // A LINE-auth handoff after the start must NOT trigger an immediate reload.
       if (false && now < start) {
@@ -1211,6 +1211,7 @@
     }
 
     function npsShowProductionError_(code){
+      if (code === 'STORE-01') document.title = 'NPS Viewer | Access Denied';
       for (const id of ['spinner', 'loader-box', 'closure-notice']) {
         document.getElementById(id).style.display = 'none';
       }
