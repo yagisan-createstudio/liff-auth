@@ -728,6 +728,7 @@
           npsSelectedLanguage_=language;
           try { localStorage.setItem(NPS_LANGUAGE_STORAGE_KEY_,language); } catch(e) { /* Keep this choice for the current page if storage is unavailable. */ }
           npsApplyLanguagePreference_();
+          npsSendLanguagePreference_();
         });
       });
       document.addEventListener('click',function(event){
@@ -957,12 +958,17 @@
       try{for(let i=0;i<4;i++){if(w===npsViewerFrame_.contentWindow)return true;const next=w.parent;if(next===w)break;w=next;}}catch(e){}
       return false;
     }
+    function npsSendLanguagePreference_(){
+      const receiver=npsPendingReceiver_;
+      if(!receiver||!npsReceiverBelongsToViewer_(receiver.source))return;
+      receiver.source.postMessage({type:'nps-viewer-language-v1',challenge:receiver.challenge,language:npsSelectedLanguage_||'ja'},receiver.origin);
+    }
     function npsSendCredential_(){
       const receiver=npsPendingReceiver_;
       if(!receiver||!npsReceiverBelongsToViewer_(receiver.source))return;
       receiver.source.postMessage({type:'nps-gateway-context-v2',challenge:receiver.challenge},receiver.origin);
       if(!npsLineCredential_)return;
-      receiver.source.postMessage({type:'nps-line-credential-v2',challenge:receiver.challenge,accessToken:npsLineCredential_},receiver.origin);
+      receiver.source.postMessage({type:'nps-line-credential-v2',challenge:receiver.challenge,accessToken:npsLineCredential_,language:npsSelectedLanguage_||'ja'},receiver.origin);
     }
     let npsC1Completed_=false,npsC1PdfWaitTimer_=null;
     function npsC1FinishLoader_(reason){
